@@ -62,3 +62,18 @@ Symbol* lookup_symbol(HashTable* hash_table, char* name) {
     }
     return NULL;
 }
+
+void clean_symbol_table(HashTable* hash_table) {
+    int i;
+    for (i = 0; i < hash_table->size; i++) {
+        Symbol* symbol = hash_table->map[i];
+        while (symbol != NULL) {
+            Symbol* temp = symbol;
+            symbol = symbol->next;
+            free(temp->name);
+            free(temp);
+        }
+    }
+    free(hash_table->map);
+    free(hash_table);
+}

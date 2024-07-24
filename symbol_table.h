@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 typedef struct Symbol {
     char* name;
@@ -17,3 +18,4 @@ unsigned int hash(char *s, int hashsize);
 HashTable* create_hash_table(int table_size);
 void insert_symbol(HashTable* hash_table, char* name, int line_address);
 Symbol* lookup_symbol(HashTable* hash_table, char* name);
+void clean_symbol_table(HashTable* hash_table); 
