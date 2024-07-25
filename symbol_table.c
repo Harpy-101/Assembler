@@ -1,4 +1,5 @@
 #include "symbol_table.h"
+#include "ast.h"
 #include <stdio.h>
 
 unsigned int hash(char *s, int hashsize) {
@@ -16,9 +17,10 @@ HashTable* create_hash_table(int size) {
     }
 
     hash_table->size = size;
+    hash_table->count = 0;
     hash_table->map = (Symbol**)calloc(size, sizeof(Symbol*));
     if (hash_table->map == NULL) {
-        fprintf(stderr, "Memory allocation for hash table map failed\n");
+        printf( "Memory allocation for hash table map failed\n");
         free(hash_table);
         exit(EXIT_FAILURE);
     }
@@ -29,6 +31,11 @@ HashTable* create_hash_table(int size) {
 void insert_symbol(HashTable* hash_table, char* name, int line_address) {
     int hash_index;
     Symbol* symbol;
+
+    if ((float)hash_table->count / hash_table->size > LOAD_FACTOR) {
+        resize_hash_table(hash_table);
+    }
+
     symbol = (Symbol*)malloc(sizeof(Symbol));
     if (symbol == NULL) {
         printf("Memory alocation failed\n");
@@ -47,7 +54,7 @@ void insert_symbol(HashTable* hash_table, char* name, int line_address) {
     hash_index = hash(name, hash_table->size);
     symbol->next = hash_table->map[hash_index];
     hash_table->map[hash_index] = symbol;
-
+    hash_table->count++;
 }
 
 Symbol* lookup_symbol(HashTable* hash_table, char* name) {
@@ -76,4 +83,57 @@ void clean_symbol_table(HashTable* hash_table) {
     }
     free(hash_table->map);
     free(hash_table);
+}
+
+/* Still need to check this function. 
+   It's possible that something in the whiile loop is wrong, but I'm not sure
+*/
+void resize_hash_table(HashTable* hash_table) {
+    int i;
+    int new_size = hash_table->size * 2;
+    Symbol** new_map = malloc(new_size * sizeof(HashTable));
+    if (new_map == NULL) {
+        printf("Memory alocation for resizing of the hashtable falied\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    for (i = 0; i < new_size; i++) {
+        new_map[i] = NULL;
+    }
+
+    for (i = 0; i < hash_table->size; i++) {
+        Symbol* symbol = hash_table->map[i];
+        while (symbol) {
+            Symbol* new_symbol = symbol->next;
+            unsigned int index = hash(symbol->name, new_size);
+            symbol->next = new_map[index];
+            new_map[index] = symbol;
+        }
+    }
+    free(hash_table->map);
+    hash_table->map = new_map;
+    hash_table->size = new_size;
+}
+
+unresolvedLabelRefList* create_unresolved_label_list() {
+    unresolvedLabelRefList* unresolved_list = malloc(sizeof(unresolvedLabelRefList));
+    if (unresolved_list == NULL) {
+        printf("Memory alocation for \"unresolved list\" falied\n");
+        exit(EXIT_FAILURE);
+    }
+    unresolved_list->head = NULL;
+    return unresolved_list;
+}
+
+void add_unresolved_label(char* name, int address, unresolvedLabelRefList* unresolved_list) {
+    unresolvedLabelRef* label = malloc(sizeof(unresolvedLabelRef));
+   if (label == NULL) {
+        printf("Memory alocation for \"unresolved label\" falied\n");
+        exit(EXIT_FAILURE);
+    }
+    label->name = strdup(name); 
+    /* Test that the alocation succeeded */
+    label->address = address;
+    label->next = unresolved_list->head;
+    unresolved_list->head = label;
 }
