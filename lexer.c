@@ -5,6 +5,7 @@
 #include "lexer.h"
 #include "panic.h"
 
+
 char* opcode[] ={
     "mov", "cmp", "add", "sub",
     "lea", "clr", "not", "inc", 
@@ -47,10 +48,11 @@ char* strndup(const char* src, size_t n) {
     return dup;
 }
 
-Token* tokenize(char* input, int line_number) {
+Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolvedLabelRefList* unresolved_list) {
     int i = 0;
     char* ptr = input;
-    Token* tokens = malloc(sizeof(Token) * 256);
+    Token* tokens = malloc(sizeof(Token) * 256); /*Chnage this into a dynamic structure after tezsting */
+    addressing_mode mode = DIRECT;
     if (!tokens) {
         memory_allocation_failure();
     }
@@ -64,6 +66,17 @@ Token* tokenize(char* input, int line_number) {
             ptr++;
             continue;
         }
+
+        /* Addressing modes */
+        if (*ptr == '#') {
+            mode = IMIDIATE;
+            ptr++;
+        }
+        else if (*ptr == '*') {
+            mode = INDIRECT;
+            ptr++;
+        }
+
         /* Id instructions */
         if (islower(*ptr)) {
             char* start = ptr;
@@ -71,7 +84,7 @@ Token* tokenize(char* input, int line_number) {
             while (isalpha(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_opcocde(temp)) {
-                Token token = create_token(TOKEN_INSTRUCTION, temp, line_number, collumn);
+                Token token = create_token(TOKEN_INSTRUCTION, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -84,7 +97,7 @@ Token* tokenize(char* input, int line_number) {
             while (isdigit(*ptr) || islower(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_register(temp)) {
-                Token token = create_token(TOKEN_REGISTER, temp, line_number, collumn);
+                Token token = create_token(TOKEN_REGISTER, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -97,9 +110,10 @@ Token* tokenize(char* input, int line_number) {
             while (*ptr == ':' || isalnum(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_label(temp)) {
-                Token token = create_token(TOKEN_LABEL, temp, line_number, collumn);
+                Token token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 ptr++;
+                insert_symbol(symbol_table, token.val, line_number);
                 continue; 
             }
             ptr = start;
@@ -111,7 +125,7 @@ Token* tokenize(char* input, int line_number) {
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_directive(temp)) {
-                Token token = create_token(TOKEN_DIRECTIVE, temp, line_number, collumn);
+                Token token = create_token(TOKEN_DIRECTIVE, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -124,7 +138,7 @@ Token* tokenize(char* input, int line_number) {
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_valid_int(temp)) {
-                Token token = create_token(TOKEN_NUMBER, temp, line_number, collumn);
+                Token token = create_token(TOKEN_NUMBER, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -137,7 +151,7 @@ Token* tokenize(char* input, int line_number) {
             while (*ptr != '"' && *ptr != EOF) ptr++;
             temp = strndup(start, ptr - start);
             if (is_valid_string(temp)) {
-                Token token = create_token(TOKEN_STRING, temp, line_number, collumn);
+                Token token = create_token(TOKEN_STRING, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -145,27 +159,42 @@ Token* tokenize(char* input, int line_number) {
         }
         /* Id comma */
         if (*ptr == ',') {
-            tokens[i++] = create_token(TOKEN_COMMA, ",", line_number, collumn);
+            tokens[i++] = create_token(TOKEN_COMMA, ",", line_number, collumn, mode);
             ptr++;
             continue;
         }
+        /* Id directives */
+        if (*ptr == '.') {
+            char* start = ptr;
+            char* temp;
+            while (!isspace(*ptr)) ptr++;
+            temp = strndup(start, ptr - start);
+            if (is_directive(temp)) {
+                Token token = create_token(TOKEN_DIRECTIVE, temp, line_number, collumn, mode);
+                tokens[i++] = token;
+                continue;
+            }
+            ptr = start;
+
+        }
         /* This is a temporery function for identification of unknowen labels
            this needs to be changed  */
-        if (isupper(*ptr)) {
+        if (isalnum(*ptr)) {
             char* start = ptr;
             char* temp;
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (1) {
-                Token token = create_token(TOKEN_LABEL, temp, line_number, collumn);
+                Token token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
                 tokens[i++] = token;
+                add_unresolved_label(token.val, line_number, unresolved_list);
                 continue;
             }
         }
-        // Nedd to add a function to id "*" and "#"
+        /* Nedd to add a function to id "*" and "#" */
 
     }
-    tokens[i] = create_token(TOKEN_EOF, "", line, collumn);
+    tokens[i] = create_token(TOKEN_EOF, "", line, collumn, DIRECT);
     return tokens;
 }
 
@@ -189,6 +218,7 @@ int is_register(char* temp) {
     return 0;
 }
 
+/* Need to add mnoore testing for labels and other reserved words */
 int is_label(char* temp) {
     int i, len = sizeof(labels) / sizeof(labels[0]);
     if (!is_register(temp)) {
@@ -225,7 +255,7 @@ int is_valid_string(char* temp) {
     return 0;
 }
 
-Token create_token(TokenType type, char* val, int line, int collumn) {
+Token create_token(TokenType type, char* val, int line, int collumn, addressing_mode mode) {
     Token *token = malloc(sizeof(Token));
     if (token == NULL) {
         memory_allocation_failure();
@@ -234,6 +264,7 @@ Token create_token(TokenType type, char* val, int line, int collumn) {
     token->val = val;
     token->line = line;
     token->collumn = collumn;
+    token->mode = mode;
 
     return *token;
 }
@@ -275,6 +306,12 @@ char* read_file(const char* filename) {
     return buffer;
 }
 
+void remove_collon(char* str) {
+    int len = strlen(str);
+    str[len-1] = '\0';
+}
+
+/*
 int main(int argc, char *argv[]) {
     const char* filename;
     char line_content[MAX_LINE_LENGTH];
@@ -282,6 +319,8 @@ int main(int argc, char *argv[]) {
     Token* current;
     FILE *file;
     int line_number = 0;
+    HashTable* symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
+    unresolvedLabelRefList* unresolved_list = create_unresolved_label_list();
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
@@ -297,7 +336,9 @@ int main(int argc, char *argv[]) {
 
     while (fgets(line_content, sizeof(line_content), file)) {
         line_number++;
-        tokens = tokenize(line_content, line_number);
+        tokens = tokenize(line_content, line_number, symbol_table, unresolved_list);
+        
+        create_instrucion_node(tokens);
 
         current = tokens;
         while (current && current->type != TOKEN_EOF) {
@@ -312,3 +353,4 @@ int main(int argc, char *argv[]) {
     fclose(file);
     return EXIT_SUCCESS;
 }
+*/
