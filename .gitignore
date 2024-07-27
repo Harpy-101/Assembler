@@ -1,8 +1,12 @@
 lexer
 old_lexer.c
-ast.c
 input.asm
 main.c
 token.c
 token
 .vscode
+ast.o
+lexer.o
+panic.o
+test.asm
+testing
