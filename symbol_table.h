@@ -1,3 +1,6 @@
+#ifndef SYMBOL_TABLE_H
+#define SYMBOL_TABLE_H
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -35,4 +38,10 @@ Symbol* lookup_symbol(HashTable* hash_table, char* name);
 void clean_symbol_table(HashTable* hash_table); 
 void resize_hash_table(HashTable* hash_table);
 unresolvedLabelRefList* create_unresolved_label_list();
-void add_unresolved_label(char* name, int address, unresolvedLabelRefList* unresolved_list); 
+void add_unresolved_label(char* name, int address, unresolvedLabelRefList* unresolved_list);
+char* strdup(const char* src); 
+void print_symbol_table(HashTable* symbol_table); 
+void print_unresolved_list(unresolvedLabelRefList* list);
+void resolve_unresolved_list(HashTable* symbol_table, unresolvedLabelRefList* list); 
+
+#endif

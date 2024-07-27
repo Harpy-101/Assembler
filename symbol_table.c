@@ -1,6 +1,6 @@
 #include "symbol_table.h"
-#include "ast.h"
 #include <stdio.h>
+#include <string.h>
 
 unsigned int hash(char *s, int hashsize) {
     unsigned hashval;
@@ -55,6 +55,7 @@ void insert_symbol(HashTable* hash_table, char* name, int line_address) {
     symbol->next = hash_table->map[hash_index];
     hash_table->map[hash_index] = symbol;
     hash_table->count++;
+    printf("Inserted symbol: %s at address: 0x%x in hash index: %d\n", symbol->name, symbol->address, hash_index);
 }
 
 Symbol* lookup_symbol(HashTable* hash_table, char* name) {
@@ -106,8 +107,8 @@ void resize_hash_table(HashTable* hash_table) {
         while (symbol) {
             Symbol* new_symbol = symbol->next;
             unsigned int index = hash(symbol->name, new_size);
-            symbol->next = new_map[index];
-            new_map[index] = symbol;
+            new_symbol->next = new_map[index];
+            new_map[index] = new_symbol;
         }
     }
     free(hash_table->map);
@@ -136,4 +137,66 @@ void add_unresolved_label(char* name, int address, unresolvedLabelRefList* unres
     label->address = address;
     label->next = unresolved_list->head;
     unresolved_list->head = label;
+}
+
+char* strdup(const char* src) {
+   /*Allocate memory for the duplicate string*/
+    char* dup = (char*)malloc(strlen(src) + 1); /*. +1 for the null terminator*/
+    char* ptr;
+    if (dup == NULL) {
+        return NULL; /*Allocation failed*/
+    }
+
+    /*Copy the string */
+    ptr = dup;
+    while (*src) {
+        *ptr++ = *src++;
+    }
+    *ptr = '\0'; /* Null-terminate the duplicated string*/
+
+    return dup;
+}
+
+void print_symbol_table(HashTable* symbol_table) {
+    int i;
+    for (i = 0; i < symbol_table->size; i++) {
+        Symbol* curr_symbol = symbol_table->map[i];
+        if (curr_symbol) {
+            printf("Index: %d\n", i);
+            while (curr_symbol) {
+                printf("Symbol: %s, found in line: %d\n", curr_symbol->name, curr_symbol->address);
+                curr_symbol = curr_symbol->next;
+            }
+        }
+    }
+}
+
+void print_unresolved_list(unresolvedLabelRefList* list) {
+    unresolvedLabelRef* node = list->head;
+    while (node != NULL) {
+        printf("Name: %s, at line: %d\n", node->name, node->address);
+        node = node->next;
+    }
+}
+
+void resolve_unresolved_list(HashTable* symbol_table, unresolvedLabelRefList* list) {
+    unresolvedLabelRef* prev = NULL;
+    unresolvedLabelRef* node = list->head;
+    Symbol* found;
+
+    if (lookup_symbol(symbol_table, node->name) != NULL) {
+        node= node->next;
+    }
+
+    while(node != NULL) {
+        found = lookup_symbol(symbol_table, node->name);
+        if (found == NULL) {
+            prev = node;
+            node = node->next;
+        }
+        else {
+            prev->next = node->next;
+            free(node);
+        }
+    }
 }
