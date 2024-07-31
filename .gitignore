@@ -1,7 +1,6 @@
 lexer
 old_lexer.c
 input.asm
-main.c
 token.c
 token
 .vscode
@@ -10,3 +9,5 @@ lexer.o
 panic.o
 test.asm
 testing
+assembler
+main.o
