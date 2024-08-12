@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include "lexer.h"
 #include "panic.h"
+#include "symbol_table.h"
 
 
 char* opcode[] ={
@@ -18,14 +19,17 @@ char* register_names[] = {
 };
 
 char* directive_list[] = {
-    ".data", ".string"
+    ".data", ".string", ".entry", ".extern"
 };
 
+/* Remove this after testing */
 char* labels[] = {
     "MAIN:", "LOOP:", "END:"
 };
 
 int line = 0, collumn;
+
+int panic = 0;
 
 char* strndup(const char* src, size_t n) {
     size_t len = strlen(src);
@@ -47,12 +51,23 @@ char* strndup(const char* src, size_t n) {
 
     return dup;
 }
-
-Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolvedLabelRefList* unresolved_list) {
+/**
+ * @brief 
+ * 
+ * @param input 
+ * @param line_number 
+ * @param symbol_table 
+ * @param unresolved_list 
+ * @param file_name 
+ * @return Token*
+ * 
+ * TODO: Add a case for handling comments at the start of the line (valid)
+ * TODO: Add a case for handling comments in the middle of a line (not-valid) */
+Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, char* file_name) {
     int i = 0;
     char* ptr = input;
     Token* tokens = malloc(sizeof(Token) * 256); /*Chnage this into a dynamic structure after tezsting */
-    addressing_mode mode = DIRECT;
+    addressing_mode mode = TBD;
     if (!tokens) {
         memory_allocation_failure();
     }
@@ -73,7 +88,7 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             ptr++;
         }
         else if (*ptr == '*') {
-            mode = INDIRECT;
+            mode = INDIRECT_REGISTER;
             ptr++;
         }
 
@@ -84,6 +99,7 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             while (isalpha(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_opcocde(temp)) {
+                (mode == TBD) ? (mode = TBD) : (mode = mode);
                 Token token = create_token(TOKEN_INSTRUCTION, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
@@ -97,6 +113,7 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             while (isdigit(*ptr) || islower(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_register(temp)) {
+                (mode == TBD) ? (mode = DIRECT_REGISTER) : (mode = INDIRECT_REGISTER);
                 Token token = create_token(TOKEN_REGISTER, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
@@ -104,17 +121,21 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             ptr = start;
         }
         /* Id labels */
-        if (isalnum(*ptr)) {
+        if (isalpha(*ptr)) {
             char* start = ptr;
             char* temp; 
             while (*ptr == ':' || isalnum(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
-            if (is_label(temp)) {
-                Token token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
-                tokens[i++] = token;
-                ptr++;
-                insert_symbol(symbol_table, token.val, line_number);
-                continue; 
+            if (*(ptr - 1) == ':') {
+                remove_collon(temp);
+                if (is_label(symbol_table, temp)) {
+                    (mode == TBD) ? (mode = DIRECT) : (mode = mode);
+                    Token token = create_token(TOKEN_LABEL_DEFENITION, temp, line_number, collumn, mode);
+                    tokens[i++] = token;
+                    ptr++;
+                    /*insert_symbol(symbol_table, token.val, line_number); */
+                    continue; 
+                }
             }
             ptr = start;
         }
@@ -132,12 +153,13 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             ptr = start;
         }
         /* Id number */
-        if (*ptr == '-' || isdigit(*ptr)) {
+        if (*ptr == '-' || *ptr == '+' || isdigit(*ptr)) {
             char* start = ptr;
             char* temp;
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_valid_int(temp)) {
+               // mode = DIRECT;
                 Token token = create_token(TOKEN_NUMBER, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
@@ -186,12 +208,21 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             temp = strndup(start, ptr - start);
             if (1) {
                 Token token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
+                token.origin = file_name;
                 tokens[i++] = token;
-                add_unresolved_label(token.val, line_number, unresolved_list);
+                /*add_unresolved_label(token.val, line_number, unresolved_list, file_name);*/
                 continue;
             }
+            ptr = start;
         }
-        /* Nedd to add a function to id "*" and "#" */
+        else {
+           char* start = ptr;
+            char* temp;
+            while (!isspace(*ptr)) ptr++;
+            temp = strndup(start, ptr - start);
+            printf("panic! at line %d: %s is an undefined word\n", line_number, temp);
+            /* Add a way to signal there was an error in the tokenizetion stage while build the AST */
+        }
 
     }
     tokens[i] = create_token(TOKEN_EOF, "", line, collumn, DIRECT);
@@ -219,16 +250,23 @@ int is_register(char* temp) {
 }
 
 /* Need to add mnoore testing for labels and other reserved words */
-int is_label(char* temp) {
+int is_label(HashTable* symbol_table, char* temp) {
     int i, len = sizeof(labels) / sizeof(labels[0]);
     if (!is_register(temp)) {
         for (i = 0; i < len; i++) {
             if (strcmp(temp, labels[i]) == 0) {
-                return 1;
+                return 0;
             }
         }
     }
-    return 0;
+    if (is_opcocde(temp) == 1) {
+        return 0;
+    }
+    if (lookup_symbol(symbol_table, temp) != NULL) {
+        printf("panic! attempting to redefine label %s\n", temp);
+        return 0;
+    }
+    return 1;
 }
 
 int is_directive(char* temp) {

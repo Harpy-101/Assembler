@@ -10,14 +10,14 @@
 #define MAX_LINE_LENGTH 256
 
 typedef enum {
-    TOKEN_LABEL, TOKEN_INSTRUCTION, TOKEN_REGISTER,
+    TOKEN_LABEL, TOKEN_LABEL_DEFENITION, TOKEN_INSTRUCTION, TOKEN_REGISTER,
     TOKEN_NUMBER, TOKEN_COMMA, TOKEN_COLON,
     TOKEN_DIRECTIVE, TOKEN_STRING, TOKEN_EOF
 } TokenType;
 
 /* Still need to add more operands for labels */
 typedef enum {
-    IMIDIATE, INDIRECT, DIRECT
+    IMIDIATE, DIRECT, INDIRECT_REGISTER, DIRECT_REGISTER, TBD
 } addressing_mode;
 
 typedef struct {
@@ -26,6 +26,7 @@ typedef struct {
     int line;
     int collumn;
     addressing_mode mode;
+    char* origin;
 } Token;
 
 
@@ -35,11 +36,11 @@ int is_special_char(int c);
 int is_opcocde(char* temp); 
 Token create_token(TokenType type, char* val, int line, int collumn, addressing_mode mode);
 int is_register(char* temp);
-int is_label(char* temp);
+int is_label(HashTable* symbol_table, char* temp);
 int is_directive(char* temp); 
 int is_valid_int(char* temp);
 int is_valid_string(char* temp);
-Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolvedLabelRefList* unresolved_list ); 
+Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, char* file_name); 
 void print_token_list(Token* tokens);
 void remove_collon(char* str); 
 
