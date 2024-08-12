@@ -126,7 +126,7 @@ unresolvedLabelRefList* create_unresolved_label_list() {
     return unresolved_list;
 }
 
-void add_unresolved_label(char* name, int address, unresolvedLabelRefList* unresolved_list) {
+void add_unresolved_label(char* name, int address, unresolvedLabelRefList* unresolved_list, char* file_name) {
     unresolvedLabelRef* label = malloc(sizeof(unresolvedLabelRef));
    if (label == NULL) {
         printf("Memory alocation for \"unresolved label\" falied\n");
@@ -134,6 +134,7 @@ void add_unresolved_label(char* name, int address, unresolvedLabelRefList* unres
     }
     label->name = strdup(name); 
     /* Test that the alocation succeeded */
+    label->origin = strdup(file_name);
     label->address = address;
     label->next = unresolved_list->head;
     unresolved_list->head = label;
@@ -179,10 +180,23 @@ void print_unresolved_list(unresolvedLabelRefList* list) {
     }
 }
 
+/**
+ * @brief 
+ *
+ * @param symbol_table 
+ * @param list 
+ * @return :
+ * todo: Add a proper resolution algorithem for both directives and labels. 
+ */
 void resolve_unresolved_list(HashTable* symbol_table, unresolvedLabelRefList* list) {
     unresolvedLabelRef* prev = NULL;
     unresolvedLabelRef* node = list->head;
     Symbol* found;
+
+    if (node == NULL) {
+        printf("Symbol table is empty\n");
+        return;
+    }
 
     if (lookup_symbol(symbol_table, node->name) != NULL) {
         node= node->next;
