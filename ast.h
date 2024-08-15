@@ -35,11 +35,14 @@ typedef struct ASTNode {
             char* directive;
             char* value;
         } directive;
-        struct {
-            status_code type;
-            char* error_code;
-        } status;
+        struct { 
+            char* value;
+        } imidiate_value;
     } data;
+    struct {
+        status_code type;
+        char* error_code;
+    } status;
     int line;
     char* machine_code;
     struct ASTNode* next;
