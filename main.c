@@ -1,7 +1,7 @@
 #include "lexer.h"
 #include "symbol_table.h"
 #include "ast.h"
-
+#include "transletor.h"
 
 
 int main(int argc, char *argv[]) {
@@ -14,6 +14,14 @@ int main(int argc, char *argv[]) {
     HashTable* symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
     unresolvedLabelRefList* unresolved_list = create_unresolved_label_list();
     ASTNodeList* node_list = create_node_list();
+    Shed* shed = malloc(sizeof(Shed));
+    int ic = 0;
+    int dc = 0;
+    shed->symbol_table = symbol_table;
+    shed->unresolved_list = unresolved_list;
+    shed->node_list = node_list;
+    shed->dc = &dc;
+    shed->ic = &ic;
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
@@ -26,6 +34,8 @@ int main(int argc, char *argv[]) {
         perror("Failed to open file");
         return EXIT_FAILURE;
     }
+
+    shed->file_name = filename;
 
     while (fgets(line_content, sizeof(line_content), file)) {
         line_number++;
@@ -57,6 +67,8 @@ int main(int argc, char *argv[]) {
 
         printf("^^^^^^^^^^^^^^^ Printing ASTNode list: ^^^^^^^^^^^^^^\n"); 
         print_node_list(node_list);
+        printf("\n ==================== Words ===================\n");
+        translate(shed);
     fclose(file);
     return EXIT_SUCCESS;
 }
