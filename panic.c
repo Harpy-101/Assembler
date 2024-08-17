@@ -11,6 +11,6 @@ void too_many_arguments(Token* token, int arg_count) {
 }
 
 void ASTNode_error(ASTNode* node) {
-    printf("\033[31mpanic!\033[0m at line: %d: %s\n", node->line, node->data.status.error_code);
+    printf("\033[31mpanic!\033[0m at line: %d: %s\n", node->line, node->status.error_code);
     exit(EXIT_FAILURE);
 }
