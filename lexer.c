@@ -74,7 +74,7 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
     collumn = 0;
     while(*ptr) {
         collumn++;
-        
+        mode = TBD; 
         if (*ptr == '\n') line++;
         
         if (isspace(*ptr)) {
@@ -99,8 +99,9 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             while (isalpha(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_opcocde(temp)) {
+                Token token;
                 (mode == TBD) ? (mode = TBD) : (mode = mode);
-                Token token = create_token(TOKEN_INSTRUCTION, temp, line_number, collumn, mode);
+                token = create_token(TOKEN_INSTRUCTION, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -113,8 +114,9 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             while (isdigit(*ptr) || islower(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_register(temp)) {
+                Token token;
                 (mode == TBD) ? (mode = DIRECT_REGISTER) : (mode = INDIRECT_REGISTER);
-                Token token = create_token(TOKEN_REGISTER, temp, line_number, collumn, mode);
+                token = create_token(TOKEN_REGISTER, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -129,8 +131,9 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             if (*(ptr - 1) == ':') {
                 remove_collon(temp);
                 if (is_label(symbol_table, temp)) {
+                    Token token;
                     (mode == TBD) ? (mode = DIRECT) : (mode = mode);
-                    Token token = create_token(TOKEN_LABEL_DEFENITION, temp, line_number, collumn, mode);
+                    token = create_token(TOKEN_LABEL_DEFENITION, temp, line_number, collumn, mode);
                     tokens[i++] = token;
                     ptr++;
                     /*insert_symbol(symbol_table, token.val, line_number); */
@@ -159,8 +162,9 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (is_valid_int(temp)) {
-               // mode = DIRECT;
-                Token token = create_token(TOKEN_NUMBER, temp, line_number, collumn, mode);
+               Token token;
+               mode = DIRECT;
+                token = create_token(TOKEN_NUMBER, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
             }
@@ -168,16 +172,20 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
         }
         /* Id string */
         if (*ptr == '"') {
-            char* start = ptr;
+            char* start = ++ptr;
             char* temp;
+            ptr++;
             while (*ptr != '"' && *ptr != EOF) ptr++;
-            temp = strndup(start, ptr - start);
-            if (is_valid_string(temp)) {
-                Token token = create_token(TOKEN_STRING, temp, line_number, collumn, mode);
-                tokens[i++] = token;
-                continue;
+            if (*ptr == '"') {
+                temp = strndup(start, ptr - start);
+                if (is_valid_string(temp)) {
+                    Token token = create_token(TOKEN_STRING, temp, line_number, collumn, mode);
+                    tokens[i++] = token;
+                    ptr++;
+                    continue;
+                }
             }
-            ptr = start;
+            ptr = start-1;
         }
         /* Id comma */
         if (*ptr == ',') {
@@ -287,8 +295,8 @@ int is_valid_int(char* temp) {
 }
 
 int is_valid_string(char* temp) {
-    if (strstr(temp, "\"") != NULL) {
-        return 1;
+    if (strchr(temp, '"') == NULL) {
+        return  1;
     }
     return 0;
 }

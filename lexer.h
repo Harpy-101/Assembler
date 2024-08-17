@@ -17,7 +17,7 @@ typedef enum {
 
 /* Still need to add more operands for labels */
 typedef enum {
-    IMIDIATE, DIRECT, INDIRECT_REGISTER, DIRECT_REGISTER, TBD
+    IMIDIATE, DIRECT, INDIRECT_REGISTER, DIRECT_REGISTER, TBD, IGNORE
 } addressing_mode;
 
 typedef struct {
