@@ -1,6 +1,5 @@
 #include "ast.h"
 #include "lexer.h"
-#include <stdio.h>
 #include <string.h>
 #include "panic.h"
 #include "symbol_table.h"
@@ -45,16 +44,16 @@ Opcode opcode_list[] = {
 ASTNode* create_AST_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token *tokens, ASTNodeList* node_list) {
     int index;
     Token* curr_token; 
-    for (index = 0; tokens[index].type != TOKEN_EOF; index++) {
-        curr_token = &tokens[index];
+    /*for (index = 0; tokens[index].type != TOKEN_EOF; index++) { */
+        curr_token = tokens;
         if (curr_token->type == TOKEN_INSTRUCTION) {
             ASTNode* instruction_node = malloc(sizeof(ASTNode));
             /* Add testing to verify the alocation */
-            instruction_node = create_instrucion_node(curr_token, &index);
+            instruction_node = create_instrucion_node(curr_token);
             insert_node(node_list, instruction_node);
         }
         else if (curr_token->type == TOKEN_LABEL_DEFENITION) {
-            /* If the token is a directive */
+            /* If the token is a  */
             ASTNode* label_node = create_label_node(symbol_table, unresolved_list, tokens, &index);
             if (label_node == NULL) {
                 return NULL;
@@ -89,9 +88,9 @@ ASTNode* create_AST_node(HashTable* symbol_table, unresolvedLabelRefList* unreso
             /* return error */
         }
     }
-}
+/*} */ 
 
-ASTNode* create_instrucion_node(Token* token, int* index) {
+ASTNode* create_instrucion_node(Token* token) {
     ASTNode* node = malloc(sizeof(ASTNode));
     int arg_num, i;
     if (node == NULL) {
@@ -163,19 +162,21 @@ Token* fetch_next_token(Token* token) {
 void excess_code(ASTNode* node, Token* token, int arg_num) {
     char* buffer = malloc(MAX_ERROR_SIZE);
     if (node->type == AST_INSTRUCTION) {
-        snprintf(buffer, MAX_ERROR_SIZE, "%s instruction can only have %d arguments. Please remove the following characters:", node->data.instruction.name, arg_num);
+        /* snprintf(buffer, MAX_ERROR_SIZE, "%s instruction can only have %d arguments. Please remove the following characters:", node->data.instruction.name, arg_num);*/
+        sprintf(buffer, "%s instruction can only have %d arguments. Please remove the following characters:", node->data.instruction.name, arg_num);
         print_remaining_tokens(buffer, token);
-        node->data.status.type = STATUS_ERROR;
-        node->data.status.error_code = buffer;
+        node->status.type = STATUS_ERROR;
+        node->status.error_code = buffer;
         node->line = token->line;
         ASTNode_error(node);
         return;
     }
     else if (node->type == AST_DIRECTIVE) {
-        snprintf(buffer, MAX_ERROR_SIZE, "%s directive can only have %d arguments. Please remove the following characters:", node->data.directive.value, 1);
+        /* snprintf(buffer, MAX_ERROR_SIZE, "%s directive can only have %d arguments. Please remove the following characters:", node->data.directive.value, 1); */
+        sprintf(buffer, "%s directive can only have %d arguments. Please remove the following characters:", node->data.directive.value, 1);
         print_remaining_tokens(buffer, token);
-        node->data.status.type = STATUS_ERROR;
-        node->data.status.error_code = buffer;
+        node->status.type = STATUS_ERROR;
+        node->status.error_code = buffer;
         node->line = token->line;
         ASTNode_error(node);
         return;
@@ -224,12 +225,12 @@ void print_remaining_tokens(char* buffer, Token* tokens) {
  */
 ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index) {
     ASTNode* node = malloc(sizeof(ASTNode));
-    Token* label;
+    /*Token* label; */
     if (node == NULL) {
         memory_allocation_failure();
     }
 
-    label = token;
+    /* label = token; */
     node->data.label.name = strdup(token->val);
 
     token++;
@@ -253,7 +254,7 @@ ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unre
         return node;
         */
         /* New implementation: */
-        definition_node = create_instrucion_node(token, index);
+        definition_node = create_instrucion_node(token);
         insert_symbol(symbol_table, node->data.label.name, token->line);
         symbol = lookup_symbol(symbol_table, node->data.label.name);
         symbol->dfinition_node = definition_node;
@@ -265,7 +266,7 @@ ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unre
     else if (token->type == TOKEN_DIRECTIVE) {
         ASTNode* node;
         node = create_directive_node(symbol_table, unresolved_list, token, index);
-
+        return node;
     }
     else if (token->type == TOKEN_EOF) {
     
@@ -281,6 +282,7 @@ ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unre
 ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->data.directive.directive = strdup(token->val);
+    node->type = AST_DIRECTIVE;
     if (strcmp(token->val,".data") == 0) {
         int synatx_test;
         token++;
@@ -289,11 +291,14 @@ ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* 
             free(node);
             return NULL;
         }
+        token++;
         node->data.directive.value = combine_tokens(token);
         return node; 
     }
     else if (strcmp(token->val,".string") == 0) {
+        token++;
         node->data.directive.value = combine_tokens(token);
+        return node;
     }
     else if (strcmp(token->val,".entry") == 0) {
        Token* temp;
@@ -359,7 +364,7 @@ char* combine_tokens(Token* tokens) {
     while (curr->type != TOKEN_EOF) {
         strcpy(ptr, curr->val);
         ptr += strlen(curr->val);
-        *ptr = ' ';
+        /**ptr = ' '; */
         ptr++;
         curr++;
     }
@@ -416,7 +421,7 @@ void insert_node(ASTNodeList* list, ASTNode* node) {
         }
         temp->next = node;
     }
-    node->next = NULL;
+    /*node->next = NULL; */
 }
 
 void free_node_list(ASTNodeList* list) {
@@ -426,7 +431,7 @@ void free_node_list(ASTNodeList* list) {
 void print_node_list(ASTNodeList* list) {
     ASTNode* curr = list->head;
     for (; curr != NULL; curr = curr->next) {
-        switch (list->head->type) {
+        switch (curr->type) {
             case AST_INSTRUCTION:
                 printf("Node type: Instruction, opcode: %s, arg1: %s, arg2: %s\n", curr->data.instruction.name, curr->data.instruction.arg1, curr->data.instruction.arg2);
                 break;
