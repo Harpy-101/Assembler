@@ -3,6 +3,7 @@
 #include <string.h>
 #include "panic.h"
 #include "symbol_table.h"
+/*#include "symbol_table.h"*/
 
 #define TWO_ARGS_OPCODE_LIMIT 5
 #define ONE_ARG_OPCODE_LIMIT 9
@@ -25,7 +26,7 @@ Opcode opcode_list[] = {
     {"cmp", IMIDIATE | DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER, IMIDIATE | DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER},
     {"add", IMIDIATE | DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER, DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER},
     {"sub", IMIDIATE | DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER, DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER},
-    {"lea", DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER}, 
+    {"lea", DIRECT, DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER}, 
     {"clr", DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER}, 
     {"not", DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER}, 
     {"inc", DIRECT | INDIRECT_REGISTER | DIRECT_REGISTER}, 
@@ -41,7 +42,7 @@ Opcode opcode_list[] = {
 
 };
 
-ASTNode* create_AST_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token *tokens, ASTNodeList* node_list) {
+ASTNode* create_AST_node(Token *tokens, ASTNodeList* node_list, DirectiveTable* directive_table) {
     int index;
     Token* curr_token; 
     /*for (index = 0; tokens[index].type != TOKEN_EOF; index++) { */
@@ -54,14 +55,21 @@ ASTNode* create_AST_node(HashTable* symbol_table, unresolvedLabelRefList* unreso
         }
         else if (curr_token->type == TOKEN_LABEL_DEFENITION) {
             /* If the token is a  */
-            ASTNode* label_node = create_label_node(symbol_table, unresolved_list, tokens, &index);
+            ASTNode* label_node = create_label_node(tokens, &index, directive_table);
             if (label_node == NULL) {
                 return NULL;
             }
             insert_node(node_list, label_node);
         }
         else if (curr_token->type == TOKEN_LABEL) {
-            Symbol* found;
+            ASTNode* label_node = malloc(sizeof(ASTNode));
+                if (label_node == NULL) {
+                    memory_allocation_failure();
+                }
+                label_node->type = AST_LABEL;
+                label_node->data.label.name = strdup(curr_token->val);
+                insert_node(node_list, label_node);
+            /*Symbol* found;
             found = lookup_symbol(symbol_table, curr_token->val);
             if (found == NULL) {
                 add_unresolved_label(curr_token->val, curr_token->line, unresolved_list, curr_token->origin);
@@ -73,12 +81,12 @@ ASTNode* create_AST_node(HashTable* symbol_table, unresolvedLabelRefList* unreso
                 }
                 label_node->type = AST_LABEL;
                 label_node->data.label.name = strdup(curr_token->val);
-                label_node->data.label.definition_node = found->dfinition_node;
+               label_node->data.label.definition_node = found->dfinition_node;
                 insert_node(node_list, label_node);
-            }
+                */
         }
         else if (curr_token->type == TOKEN_DIRECTIVE) {
-            ASTNode* directive_node = create_directive_node(symbol_table, unresolved_list, tokens, &index);
+            ASTNode* directive_node = create_directive_node(tokens, &index, directive_table);
             if (directive_node == NULL) {
                 return NULL;
             }
@@ -86,7 +94,8 @@ ASTNode* create_AST_node(HashTable* symbol_table, unresolvedLabelRefList* unreso
         }
         else {
             /* return error */
-        }
+        } /* Potentially change the signiture to "void" */
+        return NULL;
     }
 /*} */ 
 
@@ -98,6 +107,7 @@ ASTNode* create_instrucion_node(Token* token) {
     }
     node->type = AST_INSTRUCTION;
     node->data.instruction.name = strdup(token->val); 
+    node->line = token->line;
     
     arg_num = id_arg_count(token);
     for (i = 0; i < arg_num; i++) {
@@ -106,10 +116,18 @@ ASTNode* create_instrucion_node(Token* token) {
         if (token == NULL) {
             return NULL;
         }
+        if (token->type == TOKEN_LABEL_DEFENITION) {
+            printf("Panic at line: %d: you must define a label in the start of the line. If you didn't inted to define a label please remove: \":\" from %s \n", token->line, token->val);
+            return NULL;
+        }
         (i == 0) ? (node->data.instruction.arg1 = strdup(token->val)) : (node->data.instruction.arg2 = strdup(token->val));
         (i == 0) ? (node->data.instruction.arg1_addressing_mode = token->mode) : (node->data.instruction.arg2_addressing_mode = token->mode);
         /* If the addressing mode isn't valid for this instruction */
     }
+    /*printf("Instruction: %s, Arg1: %s, Arg1 Mode: %d\n", node->data.instruction.name,
+       node->data.instruction.arg1,
+       node->data.instruction.arg01_addressing_mode);*/
+    check_addressing_mode(node);
     
     token++;
     if (token->type != TOKEN_EOF) {
@@ -223,7 +241,7 @@ void print_remaining_tokens(char* buffer, Token* tokens) {
  * 
  * todo Add a handling function for excess code for all of the directive options
  */
-ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index) {
+ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_table) {
     ASTNode* node = malloc(sizeof(ASTNode));
     /*Token* label; */
     if (node == NULL) {
@@ -232,13 +250,14 @@ ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unre
 
     /* label = token; */
     node->data.label.name = strdup(token->val);
+    node->type = AST_LABEL;
 
     token++;
     if (token->type == TOKEN_INSTRUCTION) {
     /* Add testing in order to identify the kind of token and process it acordingly
        After doing so, link the definition node to the symbol table. */
         /* Symbol* found; */
-        Symbol* symbol;
+        /*Symbol* symbol;*/
         ASTNode* definition_node = malloc(sizeof(ASTNode));
         if (definition_node == NULL) {
             memory_allocation_failure();
@@ -255,22 +274,24 @@ ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unre
         */
         /* New implementation: */
         definition_node = create_instrucion_node(token);
+        /*
         insert_symbol(symbol_table, node->data.label.name, token->line);
         symbol = lookup_symbol(symbol_table, node->data.label.name);
         symbol->dfinition_node = definition_node;
         node->data.label.definition_node = symbol->dfinition_node;
+        */
+        node->data.label.definition_node = definition_node;
         node->line = token->line;
         node->type = AST_LABEL;
         return node;
     }
     else if (token->type == TOKEN_DIRECTIVE) {
-        ASTNode* node;
-        node = create_directive_node(symbol_table, unresolved_list, token, index);
+        ASTNode* defenition_node = malloc(sizeof(ASTNode));
+        defenition_node = create_directive_node(token, index, directive_table);
+        node->data.label.definition_node = defenition_node;
         return node;
     }
-    else if (token->type == TOKEN_EOF) {
-    
-    }
+ 
     else {
         /* Return error */
         printf("panic! at line: %d: expected a label defenition after: %s\n", token->line, (token-1)->val);
@@ -279,7 +300,7 @@ ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unre
     return NULL;
 }
 
-ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index) {
+ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directive_table) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->data.directive.directive = strdup(token->val);
     node->type = AST_DIRECTIVE;
@@ -291,7 +312,7 @@ ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* 
             free(node);
             return NULL;
         }
-        token++;
+        /*token++; */
         node->data.directive.value = combine_tokens(token);
         return node; 
     }
@@ -303,16 +324,26 @@ ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* 
     else if (strcmp(token->val,".entry") == 0) {
        Token* temp;
        token++;
-        temp = ++token;
+        temp = token+1;
        if (temp->type == TOKEN_EOF) {
         if (token->type == TOKEN_LABEL) {
-            Symbol* found = lookup_symbol(symbol_table, token->val);
+            directiveRef* found = lookup_directive(directive_table, token->val);
+            node->data.directive.value = token->val;
+            if (found != NULL) {
+                if (found->directive_type != ENTRY_DIRECTTIVE) {
+                    printf("panic! at line %d: the label %s was already defined as \"extern\"\n", token->line, token->val);
+                }
+            }
+            else {
+                insert_directive(directive_table, node->data.directive.value, ENTRY_DIRECTTIVE);
+            }
+            /*Symbol* found = lookup_symbol(symbol_table, token->val);
             if (found->scope == UNDEFINED) {
                 found->scope = ENTRY;   
             }
             else{
                 printf("panic! at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
-            }
+            }*/
         }
         else {
             printf("panic! at line %d: the use of the keyword \"%s\" can only be used on labels\n", token->line, (token-1)->val);
@@ -325,7 +356,17 @@ ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* 
         temp = token+1;
        if (temp->type == TOKEN_EOF) {
         if (token->type == TOKEN_LABEL) {
-            Symbol* found = lookup_symbol(symbol_table, token->val);
+            directiveRef* found = lookup_directive(directive_table, token->val);
+            node->data.directive.value = token->val;
+            if (found != NULL) {
+                if (found->directive_type != EXTERN_DIRECTIVE) {
+                    printf("panic! at line %d: the label %s was already defined as \"entry\"\n", token->line, token->val);
+                }
+            }
+            else {
+                insert_directive(directive_table, node->data.directive.value, EXTERN_DIRECTIVE);
+            }
+            /*Symbol* found = lookup_symbol(symbol_table, token->val);
             if (found == NULL) {
                 return NULL;
             }
@@ -334,7 +375,7 @@ ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* 
             }
             else{
                 printf("panic! at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
-            }
+            }*/
         }
         else {
             printf("panic! at line %d: the use of the keyword \"%s\" can only be used on labels\n", token->line, (token-1)->val);
@@ -459,16 +500,39 @@ int check_addressing_mode(ASTNode* node) {
     int err = 0;
     for (i = 0; i < len; i++) {
         if (strcmp(node->data.instruction.name, opcode_list[i].opcode) == 0) {
-            if (!(node->data.instruction.arg1_addressing_mode & opcode_list[i].arg1_allowed_modes)) {
+            if (!(node->data.instruction.arg1_addressing_mode & opcode_list[i].arg1_allowed_modes) && node->data.instruction.arg1 != NULL) {
                 printf("panic! at line %d: The addressing mode for the first argument: %s isn't vaild\n", node->line, node->data.instruction.arg1);
                 err = 1;
             }
-            if (!(node->data.instruction.arg2_addressing_mode & opcode_list[i].arg2_allowed_modes)) {
+            if (!(node->data.instruction.arg2_addressing_mode & opcode_list[i].arg2_allowed_modes) && node->data.instruction.arg2 != NULL) {
                 printf("panic! at line %d: The addressing mode for the second argument: %s isn't valid\n", node->line, node->data.instruction.arg2);
                 err = 1;
             }
         }
     }
     return err;
-}
+}/*
+    if (opcode_list[i].arg1_allowed_modes == 0 && node->data.instruction.arg1 != NULL) {
+        printf("panic! at line %d: Unexpected argument for instruction %s\n", node->line, opcode_list[i].opcode);
+        err = 1;
+        continue;
+    }
 
+    if (node->data.instruction.arg2 != NULL && opcode_list[i].arg2_allowed_modes == 0) {
+        printf("panic! at line %d: Unexpected second argument for instruction %s\n", node->line, opcode_list[i].opcode);
+        err = 1;
+        continue;
+    }
+
+    if (!(node->data.instruction.arg1_addressing_mode & opcode_list[i].arg1_allowed_modes) && node->data.instruction.arg1 != NULL) {
+        printf("panic! at line %d: The addressing mode for the first argument: %s isn't valid\n", node->line, node->data.instruction.arg1);
+        err = 1;
+    }
+
+    if (!(node->data.instruction.arg2_addressing_mode & opcode_list[i].arg2_allowed_modes) && node->data.instruction.arg2 != NULL) {
+        printf("panic! at line %d: The addressing mode for the second argument: %s isn't valid\n", node->line, node->data.instruction.arg2);
+        err = 1;
+    }
+}
+}
+*/

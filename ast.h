@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 #include "lexer.h"
-#include "symbol_table.h" 
+#include "symbol_table.h"
+/*#include "symbol_table.h" */
 
 #define MAX_ERROR_SIZE 1024
 #define ERROR 0
@@ -63,15 +64,15 @@ extern int panic;
 
 ASTNode* create_instrucion_node(Token* token);
 int id_arg_count(Token* token); 
-ASTNode* create_AST_node(HashTable* symbol_table,unresolvedLabelRefList* unresolved_list, Token *tokens, ASTNodeList* node_list);
+ASTNode* create_AST_node(Token *tokens, ASTNodeList* node_list, DirectiveTable* directive_table);
 Token* fetch_next_token(Token* token);
 void excess_code(ASTNode* node, Token* token, int arg_num);
 void print_remaining_tokens(char* buffer, Token* tokens);
 /*ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index); */
 int verify_comma_seperation_for_data_directive(Token* token); 
 char* combine_tokens(Token* tokens); 
-ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index); 
-ASTNode* create_directive_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index);
+ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_table); 
+ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directive_table);
 ASTNodeList* create_node_list();
 void insert_node(ASTNodeList* list, ASTNode* node); 
 void print_node_list(ASTNodeList* list);
