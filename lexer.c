@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include "lexer.h"
 #include "panic.h"
-#include "symbol_table.h"
 
 
 char* opcode[] ={
@@ -63,7 +62,7 @@ char* strndup(const char* src, size_t n) {
  * 
  * TODO: Add a case for handling comments at the start of the line (valid)
  * TODO: Add a case for handling comments in the middle of a line (not-valid) */
-Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, char* file_name) {
+Token* tokenize(char* input, int line_number, char* file_name) {
     int i = 0;
     char* ptr = input;
     Token* tokens = malloc(sizeof(Token) * 256); /*Chnage this into a dynamic structure after tezsting */
@@ -130,7 +129,7 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             temp = strndup(start, ptr - start);
             if (*(ptr - 1) == ':') {
                 remove_collon(temp);
-                if (is_label(symbol_table, temp)) {
+                if (is_label(temp)) {
                     Token token;
                     (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                     token = create_token(TOKEN_LABEL_DEFENITION, temp, line_number, collumn, mode);
@@ -159,11 +158,10 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
         if (*ptr == '-' || *ptr == '+' || isdigit(*ptr)) {
             char* start = ptr;
             char* temp;
-            while (!isspace(*ptr)) ptr++;
+            while (!isspace(*ptr) && (*ptr) != ',') ptr++;
             temp = strndup(start, ptr - start);
             if (is_valid_int(temp)) {
                Token token;
-               mode = DIRECT;
                 token = create_token(TOKEN_NUMBER, temp, line_number, collumn, mode);
                 tokens[i++] = token;
                 continue;
@@ -215,7 +213,9 @@ Token* tokenize(char* input, int line_number, HashTable* symbol_table, unresolve
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             if (1) {
-                Token token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
+                Token token;
+                (mode == TBD) ? (mode = DIRECT) : (mode = mode);
+                token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
                 token.origin = file_name;
                 tokens[i++] = token;
                 /*add_unresolved_label(token.val, line_number, unresolved_list, file_name);*/
@@ -258,7 +258,7 @@ int is_register(char* temp) {
 }
 
 /* Need to add mnoore testing for labels and other reserved words */
-int is_label(HashTable* symbol_table, char* temp) {
+int is_label(char* temp) {
     int i, len = sizeof(labels) / sizeof(labels[0]);
     if (!is_register(temp)) {
         for (i = 0; i < len; i++) {
@@ -268,10 +268,6 @@ int is_label(HashTable* symbol_table, char* temp) {
         }
     }
     if (is_opcocde(temp) == 1) {
-        return 0;
-    }
-    if (lookup_symbol(symbol_table, temp) != NULL) {
-        printf("panic! attempting to redefine label %s\n", temp);
         return 0;
     }
     return 1;
