@@ -2,10 +2,11 @@
 #include "ast.h"
 #include "lexer.h"
 #include "panic.h"
+#include "symbol_table.h"
+#include "word_types.h"
 #include <string.h>
 
-Word* word_arr[3] = {0,0,0};
-
+int line_counter = 2;
 /* Creata a function that can send the node divide a into helper functions that can handke it's conetents */
 void delegate_node(ASTNode* node, WordList* code_list, WordList* data_list,  Shed* shed) {
     while (node != NULL) {
@@ -21,29 +22,34 @@ void delegate_node(ASTNode* node, WordList* code_list, WordList* data_list,  She
             first_word->word_type = FIRST_WORD;
             translate_instruction_first(first_word, node, code_list, shed);
             node = node->next;
+            printf("--------------- Line number: %d ---------------\n", line_counter++);
         }
         else if (node->type == AST_DIRECTIVE) {
             if (strcmp(node->data.directive.directive, ".entry") == 0) {
                 /* Add a list to store the extern and entry calls*/
                 /* Add a testing method and a (potentially) a symbol table or linked list for them to be used when createing the files  */
-                return;
+                node = node->next;
             }
             else if (strcmp(node->data.directive.directive, ".extern") == 0) {
                 /* Add a list to store the extern and entry calls*/
                 /* Add a testing method and a (potentially) a symbol table or linked list for them to be used when createing the files  */
-                return;
+                node = node->next;
             }
             else if (strcmp(node->data.directive.directive, ".data") == 0) {
                 translate_data_directive(node, data_list, shed);
+                printf("--------------- Line number: %d ---------------\n", line_counter++);
+
             }
             else if (strcmp(node->data.directive.directive, ".string") == 0) {
                 translate_string_directive(node, data_list, shed);
                 node = node->next;
+                printf("--------------- Line number: %d ---------------\n", line_counter++);
             }
         }
         else if (node->type == AST_LABEL) {
             translate_labels(node, code_list, data_list, shed);
             node = node->next;
+            printf("--------------- Line number: %d ---------------\n", line_counter++);
         }
     }
 }
@@ -97,12 +103,13 @@ void translate_instruction_first(Word* word ,ASTNode* node, WordList* word_list,
             else {
                 translate_indirect_register(register_word, node->data.instruction.arg1, SOURCE, word_list);
             }
+            add_word_node(word_list, register_word);
+            print_word(register_word);
                /* Handle the second word */
                if (destenation_addressing_mode != IGNORE) {
-                shed->register_word = register_word;
+                /*shed->register_word = register_word;*/
                 handle_second_word(node, word, source_addressing_mode, destenation_addressing_mode, word_list, shed);
             }
-            print_word(register_word);
             return;
          }
         /* First operand is a label */
@@ -116,6 +123,8 @@ void translate_instruction_first(Word* word ,ASTNode* node, WordList* word_list,
             memset(word, 0, sizeof(Word));
             word->word_type = DIRECT_WORD;
             translate_direct(word, node->data.label.name, *shed->ic, word_list, shed);
+            /* Checking if the label was defined as an "extern" or "entry" */
+            check_if_label_is_extern_or_entry(shed->directive_table, node->data.label.name); 
             if (destenation_addressing_mode != IGNORE) {
                 handle_second_word(node, word, source_addressing_mode, destenation_addressing_mode, word_list, shed);
             }
@@ -129,7 +138,7 @@ void translate_instruction_first(Word* word ,ASTNode* node, WordList* word_list,
             }
             memset(word, 0, sizeof(Word));
             word->word_type = IMIDIATE_WORD;
-            translate_imidiate(word, node->data.imidiate_value.value, word_list);
+            translate_imidiate(word, node->data.directive.value, word_list);
             if (destenation_addressing_mode != IGNORE) {
                 handle_second_word(node, word, source_addressing_mode, destenation_addressing_mode, word_list, shed);
             }
@@ -144,6 +153,7 @@ void handle_second_word(ASTNode* node, Word* word, int source_addressing_mode, i
     /* Second operand is a register */
     if (destenation_addressing_mode == INDIRECT_REGISTER || destenation_addressing_mode == DIRECT_REGISTER) {
         translate_indirect_register(word, node->data.instruction.arg2, DESTENATION, word_list);
+        add_word_node(word_list, word);
     }
     /* IF the second operand is a label */
     else if (destenation_addressing_mode == DIRECT) {
@@ -204,24 +214,27 @@ int id_addressing_mode(int addressing_mode) {
 }
 
 void translate_direct(Word* word, char* label_name, int address, WordList* word_list, Shed* shed) {
+    /*
     Symbol* found;
     found  = lookup_symbol(shed->symbol_table, label_name);
     if (found == NULL) {
         add_word_node(word_list, word);
-        /*add_unresolved_label(label_name, address, shed->unresolved_list, (word));*/
+        //`dd_unresolved_label(label_name, address, shed->unresolved_list, (word));
         return;
-        /* Add a placeholder word for so tracking back is possible */
+         Add a placeholder word for so tracking back is possible 
     }
-    
-    word = 0;
-    
-
-    word->type.direct_word.are = 4;
+    */
+    memset(word, 0, sizeof(Word));
+    add_word_node(word_list, word);
+    add_unresolved_label(label_name, &address, word, shed->unresolved_list);
+    print_word(word);
+    /*word->type.direct_word.are = 4;
     word->type.direct_word.address = found->address;
-
+*/
 }
 
 void translate_indirect_register(Word* word, char* register_name, mode mode, WordList* word_list) {
+    word->word_type = REGISTER_WORD;
     if (mode == SOURCE) {
         char* ptr = register_name;
         word->type.register_word.are = 4;
@@ -232,7 +245,7 @@ void translate_indirect_register(Word* word, char* register_name, mode mode, Wor
         word->type.register_word.are = 4;
         word->type.register_word.destination_register_name = atoi((ptr+1));
     }
-    add_word_node(word_list, word);
+    /*add_word_node(word_list, word);*/
     return;
 }
 
@@ -240,6 +253,7 @@ void translate_imidiate(Word* word, char* value, WordList* word_list) {
     word->type.imidiate_word.are = 4;
     word->type.imidiate_word.value = atoi(value);
     add_word_node(word_list, word);
+    print_word(word);
     return;
 }
 /* Check if this function is actually beeing used */
@@ -454,12 +468,22 @@ void translate_labels(ASTNode* node, WordList* code_list, WordList* data_list, S
         }
         word->word_type = FIRST_WORD;
         /* Add the address type */
-        insert_symbol(shed->symbol_table, node->data.label.name, *(shed->ic));
+        if (code_list->head == NULL) {
+            insert_symbol(shed->symbol_table, node->data.label.name, 0);
+        }
+        else {
+            insert_symbol(shed->symbol_table, node->data.label.name, code_list->tail->address);
+        }
         translate_instruction_first(word, node->data.label.definition_node, code_list, shed);
     }
     else if (node->data.label.definition_node->type == AST_DIRECTIVE) {
         /* add the address type */
-        insert_symbol(shed->symbol_table, node->data.label.name, *(shed->dc));
+        if (data_list->head == NULL) {
+            insert_symbol(shed->symbol_table, node->data.label.name, 0);
+        }
+        else {
+            insert_symbol(shed->symbol_table, node->data.label.name, data_list->tail->address);
+        }
         /*delegate_node(node->data.label.definition_node, shed->file_name, shed); */
         if (strcmp(node->data.label.definition_node->data.directive.directive, ".data") == 0) {
             translate_data_directive(node->data.label.definition_node, data_list, shed);
@@ -481,13 +505,14 @@ void resolve_unresolved_list(Shed* shed) {
 
         if (found != NULL) {
             /* Resolve the placeholder word with the actual address from the symbol */
-            node->word->type.direct_word.address = found->address;
+            node->word->type.direct_word.address = *found->address;
+            node->word->type.direct_word.are = 2;
+            /*node->word->type.direct_word.address = found->address;*/
             /*if (node->word->type.direct_word.address = found->address) {
                 node->word->address = found->address;
             } else {
             
             }*/
-            node->word->address = found->address;
 
             /* Remove the resolved node from the unresolved list*/
             if (prev == NULL) {
@@ -496,12 +521,14 @@ void resolve_unresolved_list(Shed* shed) {
                 prev->next = node->next;
             }
 
-            /* Free the resolved node */
+            /* Dont forget to free the resolved node!! */
             unresolvedLabelRef* temp = node;
             node = node->next;
             free(temp);
         } else {
             /* Move to the next node if the symbol was not found*/
+            printf("%s is an external label not defined in this file\n", node->name);
+            node->word->type.direct_word.are = 2;
             prev = node;
             node = node->next;
         }
@@ -532,17 +559,27 @@ void print_first_word_to_file(FILE *file, firstWord *word) {
 
 void add_word_node(WordList* list, Word* word) {
     WordNode* new_node = (WordNode*)malloc(sizeof(WordNode));
+    char* value;
     if (new_node == NULL) {
         perror("Failed to allocate memory for new node");
         exit(EXIT_FAILURE);
     }
+    /* check if passing the word value is necissary 
+    value = strdup(word_value);
+    if (value == NULL) {
+        memory_allocation_failure();
+    }
+    */
     new_node->word = word;
+    /*new_node->word_value = value;*/
     new_node->next = NULL;
 
     if (list->head == NULL) {
         list->head = new_node;
         list->tail = new_node;
+        new_node->address = 1;
     } else {
+        new_node->address = list->tail->address + 1;
         list->tail->next = new_node;
         list->tail = new_node;
     }
@@ -573,4 +610,17 @@ void print_word_list(WordList* list) {
 void free_word_list(WordList* list) {
     clear_word_list(list);
     free(list);
+}
+
+void check_if_label_is_extern_or_entry(DirectiveTable* directive_table, char* label_name) {
+    directiveRef* found = lookup_directive(directive_table, label_name);
+    if (found != NULL) {
+        if (found->directive_type == EXTERN_DIRECTIVE) {
+            printf("Label: %s is defined in the file as an extern veriable. printing...\n", label_name);
+        }
+        else if (found->directive_type == ENTRY_DIRECTTIVE) {
+            printf("Label: %s is defined in the file as an entry veriable. printing...\n", label_name);
+            
+        }
+    }
 }

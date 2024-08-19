@@ -55,6 +55,7 @@ typedef struct WordNode {
     Word* word;
     struct WordNode* next;
     int address;
+    char* word_value;
 } WordNode;
 
 typedef struct {
@@ -64,7 +65,8 @@ typedef struct {
 
 typedef struct {
     unresolvedLabelRefList* unresolved_list;
-    HashTable* symbol_table;
+    SymbolTable* symbol_table;
+    DirectiveTable* directive_table;
     char* file_name;
     directWord* direct_word;
     imidiateWord* imidiate_word;
@@ -102,7 +104,7 @@ void print_word_list(WordList* list);
 void free_word_list(WordList* list);
 void print_first_word_to_file(FILE *file, firstWord *word);
 void print_word(Word* word);
-
+void check_if_label_is_extern_or_entry(DirectiveTable* directive_table, char* label_name); 
 
 
 #endif
