@@ -3,7 +3,17 @@
 #include "ast.h"
 #include "transletor.h"
 
-
+/*typedef struct {
+   struct unresolvedLabelRefList* unresolved_list;
+    //unresolvedLabelRefList* unresolved_list;
+    struct SymbolTable* symbol_table;
+    char* file_name;
+    struct ASTNodeList* node_list;
+    int* ic;
+    int* dc;
+    FILE *file;
+} Shed;
+*/
 int main(int argc, char *argv[]) {
     char* filename;
     char line_content[MAX_LINE_LENGTH];
@@ -11,9 +21,12 @@ int main(int argc, char *argv[]) {
     Token* current;
     FILE *file;
     int line_number = 0;
-    HashTable* symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
+    SymbolTable* symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
+    DirectiveTable* directive_table = create_directive_table(INITIAL_HASH_TABLE_SIZE);
     unresolvedLabelRefList* unresolved_list = create_unresolved_label_list();
     ASTNodeList* node_list = create_node_list();
+    WordList* code_list = create_word_list();
+    WordList* data_list = create_word_list();
     Shed* shed = malloc(sizeof(Shed));
     int ic = 0;
     int dc = 0;
@@ -22,6 +35,7 @@ int main(int argc, char *argv[]) {
     shed->node_list = node_list;
     shed->dc = &dc;
     shed->ic = &ic;
+    shed->directive_table = directive_table;
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
@@ -39,13 +53,13 @@ int main(int argc, char *argv[]) {
 
     while (fgets(line_content, sizeof(line_content), file)) {
         line_number++;
-        tokens = tokenize(line_content, line_number, symbol_table, unresolved_list, filename);
+        tokens = tokenize(line_content, line_number,filename);
 
         current = tokens;
         printf("=============== Line number: %d ===============\n", line_number);
         while (current && current->type != TOKEN_EOF) {
-            printf("Token Type: %d, Value: \"%s\", Line: %d, Column: %d\n",
-                   current->type, current->val, current->line, current->collumn);
+            printf("Token Type: %d, Value: \"%s\", Line: %d, Mode: %d\n",
+                   current->type, current->val, current->line, current->mode);
             current++;
         }
         /*
@@ -54,9 +68,9 @@ int main(int argc, char *argv[]) {
         */
         /*free(tokens); */
         printf("^^^^^^^^^^^^^^^ Testion ASTNodes: ^^^^^^^^^^^^^^\n");
-        create_AST_node(symbol_table, unresolved_list, tokens, node_list);
+        create_AST_node(tokens, node_list, directive_table);
     }
-        printf("$$$$$$$$$$$$$$$ Symbol table values $$$$$$$$$$$$$$$\n");
+        /*printf("$$$$$$$$$$$$$$$ Symbol table values $$$$$$$$$$$$$$$\n");
         print_symbol_table(symbol_table);
         printf("$$$$$$$$$$$$$$$ Unresolved list values values BEFORE $$$$$$$$$$$$$$$\n");
         print_unresolved_list(unresolved_list);
@@ -64,11 +78,11 @@ int main(int argc, char *argv[]) {
         resolve_unresolved_list(symbol_table, unresolved_list);
         printf("$$$$$$$$$$$$$$$ Unresolved list values values AFTER $$$$$$$$$$$$$$$\n");
         print_unresolved_list(unresolved_list);
-
+    */
         printf("^^^^^^^^^^^^^^^ Printing ASTNode list: ^^^^^^^^^^^^^^\n"); 
         print_node_list(node_list);
         printf("\n ==================== Words ===================\n");
-        translate(shed);
+        translate(shed, code_list, data_list);
     fclose(file);
     return EXIT_SUCCESS;
 }
