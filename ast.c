@@ -313,12 +313,12 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
             return NULL;
         }
         /*token++; */
-        node->data.directive.value = combine_tokens(token);
+        node->data.directive.value = combine_tokens(token, COMBINE_DATA);
         return node; 
     }
     else if (strcmp(token->val,".string") == 0) {
         token++;
-        node->data.directive.value = combine_tokens(token);
+        node->data.directive.value = combine_tokens(token, COMBINE_STRING);
         return node;
     }
     else if (strcmp(token->val,".entry") == 0) {
@@ -385,32 +385,78 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
     return node;
 }
 
-char* combine_tokens(Token* tokens) {
+char* combine_tokens(Token* tokens, combine_type c_type) {
     int total_length;
     Token* curr = tokens;
     char* combined_string;
     char* ptr;
-    while (curr->type != TOKEN_EOF) {
-        total_length += strlen(curr->val) + 1;
+    if (c_type == COMBINE_STRING) {
+        while (curr->type != TOKEN_EOF) {
+            total_length += strlen(curr->val) + 1;
+            curr++;
+        }
+        
+        combined_string = malloc(total_length + 1);
+        if (combined_string == NULL) {
+            memory_allocation_failure();
+        }
+
+        ptr = combined_string;
+        curr = tokens;
+        while (curr->type != TOKEN_EOF) {
+            strcpy(ptr, curr->val);
+            ptr += strlen(curr->val);
+            /**ptr = ' '; */
+            ptr++;
+            curr++;
+        }
+        *ptr = '\0';
+        return combined_string;
+    }
+    else {
+        /* Calculate the total length needed */
+   while (curr->type != TOKEN_EOF) {
+        /* Only count valid tokens (numbers and commas)*/
+        if (curr->type == TOKEN_NUMBER || curr->type == TOKEN_COMMA) {
+            total_length += strlen(curr->val) + 1; /* +1 for a potential space or comma*/
+        } else {
+            printf("Error: Invalid token encountered: %s\n", curr->val);
+            return NULL; /* Return NULL or handle error as needed */
+        }
         curr++;
     }
-    
-    combined_string = malloc(total_length + 1);
+
+    /*Allocate memory for the combined string*/
+    combined_string = malloc(total_length + 1); /* +1 for the null terminator*/
     if (combined_string == NULL) {
         memory_allocation_failure();
     }
 
+    /* Combine the valid tokens*/
     ptr = combined_string;
     curr = tokens;
     while (curr->type != TOKEN_EOF) {
-        strcpy(ptr, curr->val);
-        ptr += strlen(curr->val);
-        /**ptr = ' '; */
-        ptr++;
+        if (curr->type == TOKEN_NUMBER || curr->type == TOKEN_COMMA) {
+            strcpy(ptr, curr->val);
+            ptr += strlen(curr->val);
+
+            /* Add a space after a number, or leave as is if it's a comma */
+            /*if (curr->type == TOKEN_NUMBER) {
+                *ptr = ' ';
+                ptr++;
+            }*/
+        }
         curr++;
     }
+
+    /* Remove the last space and add a null terminator */
+    if (ptr > combined_string && *(ptr - 1) == ' ') {
+        ptr--;
+    }
     *ptr = '\0';
+
     return combined_string;
+    }
 }
 
 int verify_comma_seperation_for_data_directive(Token* token) {

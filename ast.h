@@ -17,6 +17,10 @@ typedef enum {
     STATUS_ERROR, STATUS_FIND_LABEL, STATUS_OK
 } status_code;
 
+typedef enum {
+    COMBINE_STRING, COMBINE_DATA
+} combine_type;
+
 typedef struct ASTNode {
     AST_node_type type;
     union {
@@ -70,7 +74,7 @@ void excess_code(ASTNode* node, Token* token, int arg_num);
 void print_remaining_tokens(char* buffer, Token* tokens);
 /*ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index); */
 int verify_comma_seperation_for_data_directive(Token* token); 
-char* combine_tokens(Token* tokens); 
+char* combine_tokens(Token* tokens, combine_type c_type); 
 ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_table); 
 ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directive_table);
 ASTNodeList* create_node_list();
