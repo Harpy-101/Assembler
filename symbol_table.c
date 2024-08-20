@@ -42,7 +42,7 @@ DirectiveTable* create_directive_table(int size) {
     return directive_table;
 }
 
-void insert_symbol(SymbolTable* hash_table, char* name, int line_address) {
+void insert_symbol(SymbolTable* hash_table, char* name, int* line_address) {
     int hash_index;
     Symbol* symbol;
 
@@ -60,8 +60,8 @@ void insert_symbol(SymbolTable* hash_table, char* name, int line_address) {
        memory_allocation_failure();
     }
 
-    symbol->address = &line_address;
-    symbol->name = name;
+    symbol->address = line_address;
+    /*symbol->name = name;*/
     hash_index = hash(name, hash_table->size);
     symbol->next = hash_table->map[hash_index];
     hash_table->map[hash_index] = symbol;
@@ -100,6 +100,7 @@ Symbol* lookup_symbol(SymbolTable* hash_table, char* name) {
     Symbol* symbol = hash_table->map[hash_index];
     
     while (symbol != NULL) {
+        printf("Comparing '%s' with '%s'\n", symbol->name, name);
         if (strcmp(symbol->name, name) == 0) {
             return symbol;
         }

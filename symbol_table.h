@@ -85,7 +85,7 @@ typedef struct {
 
 unsigned int hash(char *s, int hashsize);
 SymbolTable* create_hash_table(int table_size);
-void insert_symbol(SymbolTable* hash_table, char* name, int line_address);
+void insert_symbol(SymbolTable* hash_table, char* name, int* line_address);
 Symbol* lookup_symbol(SymbolTable* hash_table, char* name);
 void clean_symbol_table(SymbolTable* hash_table); 
 void resize_hash_table(SymbolTable* hash_table);
