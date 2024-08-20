@@ -210,7 +210,7 @@ Token* tokenize(char* input, int line_number, char* file_name) {
         if (isalnum(*ptr)) {
             char* start = ptr;
             char* temp;
-            while (!isspace(*ptr)) ptr++;
+            while (!isspace(*ptr) && (*ptr) != ',') ptr++;
             temp = strndup(start, ptr - start);
             if (1) {
                 Token token;
