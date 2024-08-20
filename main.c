@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
     int line_number = 0;
     SymbolTable* symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
     DirectiveTable* directive_table = create_directive_table(INITIAL_HASH_TABLE_SIZE);
+    DirectiveList* directive_list = create_directive_list();
     unresolvedLabelRefList* unresolved_list = create_unresolved_label_list();
     ASTNodeList* node_list = create_node_list();
     WordList* code_list = create_word_list();
@@ -36,6 +37,7 @@ int main(int argc, char *argv[]) {
     shed->dc = &dc;
     shed->ic = &ic;
     shed->directive_table = directive_table;
+    shed->directive_list = directive_list;
 
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
@@ -83,6 +85,19 @@ int main(int argc, char *argv[]) {
         print_node_list(node_list);
         printf("\n ==================== Words ===================\n");
         translate(shed, code_list, data_list);
+        stich_both_lists(code_list, data_list);
+
+        printf("====================== After address patching ===================\n");
+        resolve_unresolved_list(shed); 
+        print_word_list(code_list);
+        print_word_list(data_list);
+
+        printf("====================== Symbol table values ======================\n");
+        print_symbol_table(shed->symbol_table);
+
+        printf("==================== Directive_list ========================\n");
+        print_directive_list(directive_list);
+
     fclose(file);
     return EXIT_SUCCESS;
 }
