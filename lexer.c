@@ -4,6 +4,7 @@
 #include <ctype.h>
 #include "lexer.h"
 #include "panic.h"
+#include "preprocessor.h"
 
 
 char* opcode[] ={
@@ -62,7 +63,7 @@ char* strndup(const char* src, size_t n) {
  * 
  * TODO: Add a case for handling comments at the start of the line (valid)
  * TODO: Add a case for handling comments in the middle of a line (not-valid) */
-Token* tokenize(char* input, int line_number, char* file_name) {
+Token* tokenize(char* input, int line_number, char* file_name, MacroList* macro_list) {
     int i = 0;
     char* ptr = input;
     Token* tokens = malloc(sizeof(Token) * 256); /*Chnage this into a dynamic structure after tezsting */
@@ -129,7 +130,7 @@ Token* tokenize(char* input, int line_number, char* file_name) {
             temp = strndup(start, ptr - start);
             if (*(ptr - 1) == ':') {
                 remove_collon(temp);
-                if (is_label(temp)) {
+                if (is_label(macro_list, temp)) {
                     Token token;
                     (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                     token = create_token(TOKEN_LABEL_DEFENITION, temp, line_number, collumn, mode);
@@ -212,7 +213,7 @@ Token* tokenize(char* input, int line_number, char* file_name) {
             char* temp;
             while (!isspace(*ptr) && (*ptr) != ',') ptr++;
             temp = strndup(start, ptr - start);
-            if (1) {
+            if (1 && !is_macro(macro_list, temp)) {
                 Token token;
                 (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                 token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
@@ -258,7 +259,7 @@ int is_register(char* temp) {
 }
 
 /* Need to add mnoore testing for labels and other reserved words */
-int is_label(char* temp) {
+int is_label(MacroList* macro_list, char* temp) {
     int i, len = sizeof(labels) / sizeof(labels[0]);
     if (!is_register(temp)) {
         for (i = 0; i < len; i++) {
@@ -268,6 +269,9 @@ int is_label(char* temp) {
         }
     }
     if (is_opcocde(temp) == 1) {
+        return 0;
+    }
+    if (is_macro(macro_list, temp) == 1) {
         return 0;
     }
     return 1;

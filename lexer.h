@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include "preprocessor.h"
 #include "symbol_table.h"
 
 #define MAX_LINE_LENGTH 256
@@ -41,11 +42,11 @@ int is_special_char(int c);
 int is_opcocde(char* temp); 
 Token create_token(TokenType type, char* val, int line, int collumn, addressing_mode mode);
 int is_register(char* temp);
-int is_label(char* temp);
+int is_label(MacroList* macro_list, char* temp);
 int is_directive(char* temp); 
 int is_valid_int(char* temp);
 int is_valid_string(char* temp);
-Token* tokenize(char* input, int line_number, char* file_name); 
+Token* tokenize(char* input, int line_number, char* file_name, MacroList* macro_list); 
 void print_token_list(Token* tokens);
 void remove_collon(char* str); 
 
