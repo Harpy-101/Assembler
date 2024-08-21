@@ -1,4 +1,5 @@
 #include "lexer.h"
+#include "preprocessor.h"
 #include "symbol_table.h"
 #include "ast.h"
 #include "transletor.h"
@@ -25,6 +26,7 @@ int main(int argc, char *argv[]) {
     DirectiveTable* directive_table = create_directive_table(INITIAL_HASH_TABLE_SIZE);
     DirectiveList* directive_list = create_directive_list();
     unresolvedLabelRefList* unresolved_list = create_unresolved_label_list();
+    MacroList* macro_list = create_macro_list();
     ASTNodeList* node_list = create_node_list();
     WordList* code_list = create_word_list();
     WordList* data_list = create_word_list();
@@ -55,7 +57,7 @@ int main(int argc, char *argv[]) {
 
     while (fgets(line_content, sizeof(line_content), file)) {
         line_number++;
-        tokens = tokenize(line_content, line_number,filename);
+        tokens = tokenize(line_content, line_number,filename, macro_list);
 
         current = tokens;
         printf("=============== Line number: %d ===============\n", line_number);
