@@ -84,6 +84,7 @@ typedef struct {
     registerWord* register_word;
     ASTNodeList* node_list;
     DirectiveList* directive_list;
+    char* curr_file_name;
     int* ic;
     int* dc;
 } Shed;
