@@ -252,7 +252,7 @@ void translate_direct(Word* word, char* label_name, int address, WordList* word_
     memset(word, 0, sizeof(Word));
     add_word_node(word_list, word);
     add_unresolved_label(label_name, &word_list->tail->address, word, shed->unresolved_list);
-    check_if_label_is_extern_or_entry(shed->directive_table, label_name, shed->directive_list, &word_list->tail->address);
+    check_if_label_is_extern_or_entry(shed->directive_table, label_name, shed->directive_list,shed->symbol_table, &word_list->tail->address);
     print_word(word);
     /*word->type.direct_word.are = 4;
     word->type.direct_word.address = found->address;
@@ -520,7 +520,7 @@ void translate_labels(ASTNode* node, WordList* code_list, WordList* data_list, S
         }*/
         label_word = translate_instruction_first(word, node->data.label.definition_node, code_list, shed);
         insert_symbol(shed->symbol_table, node->data.label.name, &label_word->address);
-        check_if_label_is_extern_or_entry(shed->directive_table, node->data.label.name, shed->directive_list, &label_word->address);
+        check_if_label_is_extern_or_entry(shed->directive_table, node->data.label.name, shed->directive_list, shed->symbol_table, &label_word->address);
     }
     else if (node->data.label.definition_node->type == AST_DIRECTIVE) {
         /* add the address type */
@@ -536,10 +536,12 @@ void translate_labels(ASTNode* node, WordList* code_list, WordList* data_list, S
         if (strcmp(node->data.label.definition_node->data.directive.directive, ".data") == 0) {
             label_word = translate_data_directive(node->data.label.definition_node, data_list, shed);
             insert_symbol(shed->symbol_table, node->data.label.name, &label_word->address);
+            check_if_label_is_extern_or_entry(shed->directive_table, node->data.label.name, shed->directive_list, shed->symbol_table, &label_word->address);
         }
         else if (strcmp(node->data.label.definition_node->data.directive.directive, ".string") == 0) {
             label_word = translate_string_directive(node->data.label.definition_node, data_list, shed);
             insert_symbol(shed->symbol_table, node->data.label.name, &label_word->address);
+            check_if_label_is_extern_or_entry(shed->directive_table, node->data.label.name, shed->directive_list, shed->symbol_table, &label_word->address); 
         }
     }
 }
@@ -702,14 +704,15 @@ void free_word_list(WordList* list) {
     free(list);
 }
 
-void check_if_label_is_extern_or_entry(DirectiveTable* directive_table, char* label_name, DirectiveList* directive_list, int* address) {
+void check_if_label_is_extern_or_entry(DirectiveTable* directive_table, char* label_name, DirectiveList* directive_list, SymbolTable* symbol_table, int* address) {
     directiveRef* found = lookup_directive(directive_table, label_name);
+    Symbol* defined_label = lookup_symbol(symbol_table, label_name);
     if (found != NULL) {
-        if (found->directive_type == EXTERN_DIRECTIVE) {
+        if (found->directive_type == EXTERN_DIRECTIVE && defined_label == NULL) {
             printf("Label: %s is defined in the file as an extern veriable. printing...\n", label_name);
             add_directive_node(directive_list, label_name, address, EXTERN_DIRECTIVE);
         }
-        else if (found->directive_type == ENTRY_DIRECTTIVE) {
+        else if (found->directive_type == ENTRY_DIRECTTIVE && defined_label != NULL) {
             printf("Label: %s is defined in the file as an entry veriable. printing...\n", label_name);
             add_directive_node(directive_list, label_name, address, ENTRY_DIRECTTIVE);
         }

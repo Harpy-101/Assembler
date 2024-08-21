@@ -116,7 +116,7 @@ void print_word_list(WordList* list);
 void free_word_list(WordList* list);
 void print_first_word_to_file(FILE *file, firstWord *word);
 void print_word(Word* word);
-void check_if_label_is_extern_or_entry(DirectiveTable* directive_table, char* label_name, DirectiveList* directive_list, int* address); 
+void check_if_label_is_extern_or_entry(DirectiveTable* directive_table, char* label_name, DirectiveList* directive_list, SymbolTable* symbol_table, int* address); 
 DirectiveList* create_directive_list();
 void add_directive_node(DirectiveList* directive_list, char* label_name, int* address, diretiveType directive_type);
 void clear_directive_list(DirectiveList* list);
