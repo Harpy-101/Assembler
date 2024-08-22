@@ -137,7 +137,7 @@ WordNode* translate_instruction_first(Word* word ,ASTNode* node, WordList* word_
            }
             memset(word, 0, sizeof(Word));
             word->word_type = DIRECT_WORD;
-            translate_direct(word, node->data.instruction.arg1, *shed->ic, word_list, shed);
+            translate_direct(word, node->data.instruction.arg1, word_list, shed);
             /* Checking if the label was defined as an "extern" or "entry" */
             /*check_if_label_is_extern_or_entry(shed->directive_table, node->data.instruction.arg1, shed->directive_list, word->type.); */
             if (destenation_addressing_mode != IGNORE) {
@@ -187,7 +187,7 @@ void handle_second_word(ASTNode* node, Word* word, int source_addressing_mode, i
         }
         memset(direct_word, 0, sizeof(Word));
         direct_word->word_type = DIRECT_WORD;
-        translate_direct(direct_word, node->data.instruction.arg2, *shed->ic, word_list, shed);
+        translate_direct(direct_word, node->data.instruction.arg2, word_list, shed);
         /*check_if_label_is_extern_or_entry(shed->directive_table, node->data.instruction.arg2);*/
     }
     /* Second operand is a number */
@@ -238,7 +238,7 @@ int id_addressing_mode(int addressing_mode) {
     return -1;
 }
 
-void translate_direct(Word* word, char* label_name, int address, WordList* word_list, Shed* shed) {
+void translate_direct(Word* word, char* label_name, WordList* word_list, Shed* shed) {
     /*
     Symbol* found;
     found  = lookup_symbol(shed->symbol_table, label_name);
@@ -310,7 +310,6 @@ WordNode* translate_string_directive (ASTNode* node, WordList* word_list, Shed* 
         memset(directive_word, 0, sizeof(Word));
         directive_word->word_type = DIRECTIVE_WORD;
         directive_word->type.directive_word.value = *ptr;
-        (*shed->dc)++;
         add_word_node(word_list, directive_word);
         if (first_word == 0) {
             first_word = 1;
@@ -318,7 +317,6 @@ WordNode* translate_string_directive (ASTNode* node, WordList* word_list, Shed* 
         }
         print_word(directive_word);
     }
-    (*shed->dc)++;
     directive_word = malloc(sizeof(Word));
     if (directive_word == NULL) {
         memory_allocation_failure();
@@ -364,7 +362,6 @@ WordNode* translate_data_directive(ASTNode* node, WordList* word_list, Shed* she
         value[ptr - start] = '\0';  
         directive_word->type.directive_word.value = atoi(value);
 
-        (*shed->dc)++;
 
         add_word_node(word_list, directive_word);
         if (first_word == 0) {
@@ -416,9 +413,9 @@ void print_register_word(registerWord* word) {
     printf("Word: %u%u%u%u\n", word->padding, word->source_regiester_name, word->destination_register_name, word->are);
 }
 */
-void translate(Shed* shed, WordList* code_list, WordList* data_list) {
+void translate(Shed* shed, WordList* code_list, int* transletion_error) {
     if (shed->node_list->head != NULL) {
-        delegate_node(shed->node_list->head, code_list, data_list, shed);
+        delegate_node(shed->node_list->head, code_list, shed->data_list, shed);
         /*shed->node_list->head = shed->node_list->head->next; */
     }
 }
@@ -549,6 +546,7 @@ void translate_labels(ASTNode* node, WordList* code_list, WordList* data_list, S
 void resolve_unresolved_list(Shed* shed) {
     unresolvedLabelRef* node = shed->unresolved_list->head;
     unresolvedLabelRef* prev = NULL;
+    unresolvedLabelRef* temp;
     Symbol* found = NULL;
 
     while (node != NULL) {
@@ -569,7 +567,7 @@ void resolve_unresolved_list(Shed* shed) {
             }
 
             /* Free the resolved node */
-            unresolvedLabelRef* temp = node;
+            temp = node;
             node = node->next;
             free(temp);
         } else {
@@ -650,7 +648,6 @@ void print_first_word_to_file(FILE *file, firstWord *word) {
 
 void add_word_node(WordList* list, Word* word) {
     WordNode* new_node = (WordNode*)malloc(sizeof(WordNode));
-    char* value;
     if (new_node == NULL) {
         perror("Failed to allocate memory for new node");
         exit(EXIT_FAILURE);

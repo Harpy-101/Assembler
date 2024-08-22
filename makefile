@@ -1,5 +1,5 @@
-assembler: main.o lexer.o panic.o ast.o symbol_table.o transletor.o
-	gcc -ansi -pedantic -Wall -g lexer.o panic.o ast.o symbol_table.o main.o transletor.o -o assembler
+assembler: main.o lexer.o panic.o ast.o symbol_table.o transletor.o preprocessor.o file_generator.o
+	gcc -ansi -pedantic -Wall -g lexer.o panic.o ast.o symbol_table.o main.o transletor.o preprocessor.o file_generator.o -o assembler
 
 lexer.o: lexer.c lexer.h
 	gcc -ansi -pedantic -Wall -g -c lexer.c
@@ -18,6 +18,12 @@ main.o: main.c
 
 transletor.o: transletor.c transletor.h
 	gcc -ansi -pedantic -Wall -g -c transletor.c
-	
+
+preprocessor.o: preprocessor.c preprocessor.h
+	gcc -ansi -pedantic -Wall -g -c preprocessor.c
+
+file_generator.o: file_generator.c file_generator.h
+	gcc -ansi -pedantic -Wall -g -c file_generator.c
+
 clean:
 	rm -f *.o assembeler

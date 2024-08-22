@@ -80,6 +80,8 @@ typedef struct {
     DirectiveTable* directive_table;
     char* file_name;
     directWord* direct_word;
+    WordList* code_list;
+    WordList* data_list;
     imidiateWord* imidiate_word;
     registerWord* register_word;
     ASTNodeList* node_list;
@@ -96,7 +98,7 @@ typedef enum {
 int id_opcode(char* instruction_name);
 int id_addressing_mode(int addressing_mode); 
 void translate_indirect_register(Word* word, char* register_name, mode mode, WordList* word_list);
-void translate_direct(Word* word, char* label_name, int address, WordList* word_list, Shed* shed);
+void translate_direct(Word* word, char* label_name, WordList* word_list, Shed* shed);
 void translate_imidiate(Word* word, char* value, WordList* word_list); 
 void handle_second_word(ASTNode* node, Word* word, int source_addressing_mode, int destenation_addressing_mode, WordList* word_list, Shed* shed); 
 void delegate_node(ASTNode* node, WordList* code_list, WordList* data_list, Shed* shed);
@@ -105,7 +107,7 @@ void print_direct_word(directWord* word);
 void print_imidiate_word(imidiateWord* word); 
 void print_register_word(registerWord* word); 
 WordNode* translate_instruction_first(Word* first_word ,ASTNode* node, WordList* word_list, Shed* shed);
-void translate(Shed* shed, WordList* code_list, WordList* data_list);
+void translate(Shed* shed, WordList* code_list, int* transletion_error);
 void print_directive_word(directiveWord* word); 
 WordNode* translate_string_directive (ASTNode* node, WordList* word_list, Shed* shed);
 WordNode* translate_data_directive(ASTNode* node, WordList* word_list, Shed* shed); 

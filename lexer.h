@@ -46,7 +46,7 @@ int is_label(MacroList* macro_list, char* temp);
 int is_directive(char* temp); 
 int is_valid_int(char* temp);
 int is_valid_string(char* temp);
-Token* tokenize(char* input, int line_number, char* file_name, MacroList* macro_list); 
+Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag); 
 void print_token_list(Token* tokens);
 void remove_collon(char* str); 
 

@@ -63,7 +63,7 @@ char* strndup(const char* src, size_t n) {
  * 
  * TODO: Add a case for handling comments at the start of the line (valid)
  * TODO: Add a case for handling comments in the middle of a line (not-valid) */
-Token* tokenize(char* input, int line_number, char* file_name, MacroList* macro_list) {
+Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag) {
     int i = 0;
     char* ptr = input;
     Token* tokens = malloc(sizeof(Token) * 256); /*Chnage this into a dynamic structure after tezsting */
@@ -139,6 +139,8 @@ Token* tokenize(char* input, int line_number, char* file_name, MacroList* macro_
                     /*insert_symbol(symbol_table, token.val, line_number); */
                     continue; 
                 }
+                printf("panic! at line %d: a label can't be the same name as an opcode, register or a macro\n", line_number);
+                *token_error_flag = 1;
             }
             ptr = start;
         }
@@ -217,7 +219,6 @@ Token* tokenize(char* input, int line_number, char* file_name, MacroList* macro_
                 Token token;
                 (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                 token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
-                token.origin = file_name;
                 tokens[i++] = token;
                 /*add_unresolved_label(token.val, line_number, unresolved_list, file_name);*/
                 continue;
@@ -229,6 +230,7 @@ Token* tokenize(char* input, int line_number, char* file_name, MacroList* macro_
             char* temp;
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
+            *token_error_flag = 1;
             printf("panic! at line %d: %s is an undefined word\n", line_number, temp);
             /* Add a way to signal there was an error in the tokenizetion stage while build the AST */
         }

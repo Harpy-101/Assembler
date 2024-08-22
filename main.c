@@ -1,112 +1,175 @@
+#include "file_generator.h"
 #include "lexer.h"
 #include "preprocessor.h"
 #include "symbol_table.h"
 #include "ast.h"
 #include "transletor.h"
+#include <stdio.h>
 
-/*typedef struct {
-   struct unresolvedLabelRefList* unresolved_list;
-    //unresolvedLabelRefList* unresolved_list;
-    struct SymbolTable* symbol_table;
-    char* file_name;
-    struct ASTNodeList* node_list;
-    int* ic;
-    int* dc;
-    FILE *file;
-} Shed;
-*/
+/*
 int main(int argc, char *argv[]) {
-    char* filename;
+ 
     char line_content[MAX_LINE_LENGTH];
     Token* tokens;
-    Token* current;
-    FILE *file;
     int line_number = 0;
-    SymbolTable* symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
-    DirectiveTable* directive_table = create_directive_table(INITIAL_HASH_TABLE_SIZE);
-    DirectiveList* directive_list = create_directive_list();
-    unresolvedLabelRefList* unresolved_list = create_unresolved_label_list();
-    MacroList* macro_list = create_macro_list();
-    ASTNodeList* node_list = create_node_list();
-    WordList* code_list = create_word_list();
-    WordList* data_list = create_word_list();
-    Shed* shed = malloc(sizeof(Shed));
-    int ic = 0;
-    int dc = 0;
-    shed->symbol_table = symbol_table;
-    shed->unresolved_list = unresolved_list;
-    shed->node_list = node_list;
-    shed->dc = &dc;
-    shed->ic = &ic;
-    shed->directive_table = directive_table;
-    shed->directive_list = directive_list;
 
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-        return EXIT_FAILURE;
+    if (argc < 2) {
+        printf("No input file detected. Stoping the program.\n");
     }
 
-    filename = argv[1];
-    file = fopen(filename, "r");
-    if (!file) {
-        perror("Failed to open file");
-        return EXIT_FAILURE;
-    }
+    else {
+        int i;
+        for (i = 1; i < argc; i++) {
+            char* file_name  = add_suffix_to_file_name(argv[i], ".as", INPUT);
+            FILE* input_file = fopen(file_name, "r");
+            FILE* output_file; 
+            int macro_error_detected = 0;
+            MacroList* macro_list;
+            char*output_file_name;
 
-    shed->file_name = filename;
+            if (!input_file) {
+                printf("panic! unable to open %s\n", file_name);
+                return EXIT_FAILURE;
+            }
 
-    while (fgets(line_content, sizeof(line_content), file)) {
-        line_number++;
-        tokens = tokenize(line_content, line_number,filename, macro_list);
+            output_file_name = add_suffix_to_file_name(file_name, ".am", OUTPUT);
+            output_file = fopen(output_file_name, "w");
+            if (output_file == NULL) {
+                printf("panic! unable to create \".am\" file\n");
+                return EXIT_FAILURE;
+            }
 
-        current = tokens;
-        printf("=============== Line number: %d ===============\n", line_number);
-        while (current && current->type != TOKEN_EOF) {
-            printf("Token Type: %d, Value: \"%s\", Line: %d, Mode: %d\n",
-                   current->type, current->val, current->line, current->mode);
-            current++;
+            macro_list = create_macro_list();
+
+            macro_error_detected = process_file(input_file, output_file, macro_list);
+            if (macro_error_detected) {
+                clear_macro_list(macro_list);
+                continue;
+            }
+            else {
+                fopen(output_file_name, "r");
+                Shed* shed = malloc(sizeof(Shed));
+                int token_creation_error = 0, ast_creation_error = 0, transletion_error = 0;
+                shed->symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
+                shed->directive_table = create_directive_table(INITIAL_HASH_TABLE_SIZE);
+                shed->node_list = create_node_list();
+                shed->code_list = create_word_list();
+                shed->data_list = create_word_list();
+                shed->directive_list = create_directive_list();
+                shed->unresolved_list = create_unresolved_label_list();
+                shed->file_name = file_name;
+                line_number++;
+                while (fgets(line_content, sizeof(line_content), output_file)) {
+                    tokens = tokenize(line_content, line_number, macro_list, &token_creation_error);
+                    create_AST_node(tokens, shed->node_list, shed->directive_table);
+                }
+                translate(shed, shed->code_list, &transletion_error);
+                    
+                if (token_creation_error == 0 && ast_creation_error == 0 && transletion_error == 0) {
+                    create_output_files(shed);
+                }
+                    
+            }
         }
-        /*
-        print_symbol_table(symbol_table);
-        print_unresolved_list(unresolved_list);
-        */
-        /*free(tokens); */
-        printf("^^^^^^^^^^^^^^^ Testion ASTNodes: ^^^^^^^^^^^^^^\n");
-        create_AST_node(tokens, node_list, directive_table);
     }
-        /*printf("$$$$$$$$$$$$$$$ Symbol table values $$$$$$$$$$$$$$$\n");
-        print_symbol_table(symbol_table);
-        printf("$$$$$$$$$$$$$$$ Unresolved list values values BEFORE $$$$$$$$$$$$$$$\n");
-        print_unresolved_list(unresolved_list);
 
-        resolve_unresolved_list(symbol_table, unresolved_list);
-        printf("$$$$$$$$$$$$$$$ Unresolved list values values AFTER $$$$$$$$$$$$$$$\n");
-        print_unresolved_list(unresolved_list);
-    */
-        printf("^^^^^^^^^^^^^^^ Printing ASTNode list: ^^^^^^^^^^^^^^\n"); 
-        print_node_list(node_list);
-        printf("\n ==================== Words ===================\n");
-        translate(shed, code_list, data_list);
-        stich_both_lists(code_list, data_list);
 
-        printf("====================== After address patching ===================\n");
-        resolve_unresolved_list(shed); 
-        print_word_list(code_list);
-        print_word_list(data_list);
-
-        printf("====================== Symbol table values ======================\n");
-        print_symbol_table(shed->symbol_table);
-
-        printf("==================== Directive_list ========================\n");
-        print_directive_list(directive_list);
-
-    fclose(file);
-    return EXIT_SUCCESS;
 }
+*/
+
+int main(int argc, char *argv[]) {
+    char line_content[MAX_LINE_LENGTH];
+    int line_number = 0;
+    int i;
+
+    if (argc < 2) {
+        printf("No input file detected. Stopping the program.\n");
+        return EXIT_FAILURE;
+    }
+
+    for ( i = 1; i < argc; i++) {
+        char* file_name = add_suffix_to_file_name(argv[i], ".as", INPUT);
+        FILE* input_file = fopen(file_name, "r");
+        char* output_file_name;
+        FILE* output_file;
+        MacroList* macro_list;
+        int macro_error_detected;
+        Shed* shed = malloc(sizeof(Shed));
+        int token_creation_error = 0, ast_creation_error = 0, translation_error = 0;
+        if (!input_file) {
+            printf("panic! unable to open %s\n", file_name);
+            free(file_name);
+            continue;
+        }
+
+        output_file_name = add_suffix_to_file_name(file_name, ".am", OUTPUT);
+        output_file = fopen(output_file_name, "w");
+        if (output_file == NULL) {
+            printf("panic! unable to create \".am\" file\n");
+            fclose(input_file);
+            free(file_name);
+            free(output_file_name);
+            continue;
+        }
+
+        macro_list = create_macro_list();
+        macro_error_detected = process_file(input_file, output_file, macro_list);
+        fclose(input_file);
+        fclose(output_file);
+
+        if (macro_error_detected) {
+            clear_macro_list(macro_list);
+            free(file_name);
+            free(output_file_name);
+            continue;
+        }
+
+        output_file = fopen(output_file_name, "r");
+        if (output_file == NULL) {
+            printf("panic! unable to open %s for reading\n", output_file_name);
+            clear_macro_list(macro_list);
+            free(file_name);
+            free(output_file_name);
+            continue;
+        }
+
+        shed->symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
+        shed->directive_table = create_directive_table(INITIAL_HASH_TABLE_SIZE);
+        shed->node_list = create_node_list();
+        shed->code_list = create_word_list();
+        shed->data_list = create_word_list();
+        shed->directive_list = create_directive_list();
+        shed->unresolved_list = create_unresolved_label_list();
+        shed->file_name = file_name;
+
+        line_number = 1;
+
+        while (fgets(line_content, sizeof(line_content), output_file)) {
+            Token* tokens = tokenize(line_content, line_number, macro_list, &token_creation_error);
+            create_AST_node(tokens, shed->node_list, shed->directive_table);
+            line_number++;
+        }
+
+        fclose(output_file);
+
+        if (token_creation_error == 0 && ast_creation_error == 0 && translation_error == 0) {
+            translate(shed, shed->code_list, &translation_error);
+            if (translation_error == 0) {
+                create_output_files(shed);
+            }
+        }
+
+        clear_macro_list(macro_list);
+        free(shed);
+        free(file_name);
+        free(output_file_name);
+    }
+
+    return EXIT_SUCCESS;
 
 
 
-
+}
 
 /*
 #include <stdio.h>
