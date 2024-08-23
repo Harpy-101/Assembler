@@ -81,5 +81,9 @@ ASTNodeList* create_node_list();
 void insert_node(ASTNodeList* list, ASTNode* node); 
 void print_node_list(ASTNodeList* list);
 int check_addressing_mode(ASTNode* node);
+void free_instruction_node(ASTNode* node);
+void free_directive_node(ASTNode* node);
+void free_node_list(ASTNodeList* list);
+
 
 #endif

@@ -141,13 +141,17 @@ int main(int argc, char *argv[]) {
         shed->directive_list = create_directive_list();
         shed->unresolved_list = create_unresolved_label_list();
         shed->file_name = file_name;
+        
 
         line_number = 1;
 
         while (fgets(line_content, sizeof(line_content), output_file)) {
-            Token* tokens = tokenize(line_content, line_number, macro_list, &token_creation_error);
+            Token* tokens = malloc(sizeof(Token) * 256);
+            tokenize(line_content, line_number, macro_list, &token_creation_error, tokens);
             create_AST_node(tokens, shed->node_list, shed->directive_table);
             line_number++;
+            clear_token_arr(tokens);
+            /*free(tokens);*/
         }
 
         fclose(output_file);
@@ -160,6 +164,20 @@ int main(int argc, char *argv[]) {
         }
 
         clear_macro_list(macro_list);
+        clear_word_list(shed->code_list);
+        clear_word_list(shed->data_list);
+        clear_directive_list(shed->directive_list);
+        clean_symbol_table(shed->symbol_table);
+        clean_directive_table(shed->directive_table);
+        clear_unresolved_list(shed->unresolved_list);
+        free_node_list(shed->node_list);
+        free(shed->node_list);
+        free(shed->directive_list);
+        free(shed->unresolved_list);
+        free(shed->code_list);
+        free(shed->data_list);
+
+        free(macro_list);
         free(shed);
         free(file_name);
         free(output_file_name);

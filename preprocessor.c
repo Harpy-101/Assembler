@@ -90,6 +90,7 @@ void clear_macro_list(MacroList* list) {
     }
 
     list->head = NULL;
+    list = NULL;
 }
 
 void replace_macro(MacroList* macro_list, char* curr_line, FILE* output_file) {

@@ -63,14 +63,15 @@ char* strndup(const char* src, size_t n) {
  * 
  * TODO: Add a case for handling comments at the start of the line (valid)
  * TODO: Add a case for handling comments in the middle of a line (not-valid) */
-Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag) {
+void tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag, Token* tokens) {
     int i = 0;
     char* ptr = input;
-    Token* tokens = malloc(sizeof(Token) * 256); /*Chnage this into a dynamic structure after tezsting */
+    /*Token* tokens = malloc(sizeof(Token) * 256); Chnage this into a dynamic structure after tezsting 
+    */
     addressing_mode mode = TBD;
-    if (!tokens) {
+    /*if (!tokens) {
         memory_allocation_failure();
-    }
+    }*/
     collumn = 0;
     while(*ptr) {
         collumn++;
@@ -102,9 +103,11 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
                 Token token;
                 (mode == TBD) ? (mode = TBD) : (mode = mode);
                 token = create_token(TOKEN_INSTRUCTION, temp, line_number, collumn, mode);
+                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
+            free(temp);
             ptr = start;
         }
         /* Id regiesters */
@@ -117,9 +120,11 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
                 Token token;
                 (mode == TBD) ? (mode = DIRECT_REGISTER) : (mode = INDIRECT_REGISTER);
                 token = create_token(TOKEN_REGISTER, temp, line_number, collumn, mode);
+                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
+            free(temp);
             ptr = start;
         }
         /* Id labels */
@@ -134,6 +139,7 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
                     Token token;
                     (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                     token = create_token(TOKEN_LABEL_DEFENITION, temp, line_number, collumn, mode);
+                    /*add_token(token_list, token);*/
                     tokens[i++] = token;
                     ptr++;
                     /*insert_symbol(symbol_table, token.val, line_number); */
@@ -142,6 +148,7 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
                 printf("panic! at line %d: a label can't be the same name as an opcode, register or a macro\n", line_number);
                 *token_error_flag = 1;
             }
+            free(temp);
             ptr = start;
         }
         /* Id directives*/
@@ -152,6 +159,7 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
             temp = strndup(start, ptr - start);
             if (is_directive(temp)) {
                 Token token = create_token(TOKEN_DIRECTIVE, temp, line_number, collumn, mode);
+                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
@@ -166,9 +174,11 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
             if (is_valid_int(temp)) {
                Token token;
                 token = create_token(TOKEN_NUMBER, temp, line_number, collumn, mode);
+                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
+            free(temp);
             ptr = start;
         }
         /* Id string */
@@ -181,15 +191,19 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
                 temp = strndup(start, ptr - start);
                 if (is_valid_string(temp)) {
                     Token token = create_token(TOKEN_STRING, temp, line_number, collumn, mode);
+                    /*add_token(token_list, token);*/
                     tokens[i++] = token;
                     ptr++;
                     continue;
                 }
             }
+            free(temp);
             ptr = start-1;
         }
         /* Id comma */
         if (*ptr == ',') {
+            /*Token token = create_token(TOKEN_COMMA, ",", line_number, collumn, mode);*/
+            /*add_token(token_list, token);*/
             tokens[i++] = create_token(TOKEN_COMMA, ",", line_number, collumn, mode);
             ptr++;
             continue;
@@ -202,9 +216,11 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
             temp = strndup(start, ptr - start);
             if (is_directive(temp)) {
                 Token token = create_token(TOKEN_DIRECTIVE, temp, line_number, collumn, mode);
+                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
+            free(temp);
             ptr = start;
 
         }
@@ -219,10 +235,12 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
                 Token token;
                 (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                 token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
+                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 /*add_unresolved_label(token.val, line_number, unresolved_list, file_name);*/
                 continue;
             }
+            free(temp);
             ptr = start;
         }
         else {
@@ -236,8 +254,10 @@ Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_
         }
 
     }
-    tokens[i] = create_token(TOKEN_EOF, "", line, collumn, DIRECT);
-    return tokens;
+    /*token = create_token(TOKEN_EOF, NULL, line, collumn, DIRECT);*/
+    /*add_token(token_list, token);*/
+    tokens[i] =create_token(TOKEN_EOF, NULL, line, collumn, DIRECT);
+    return;
 }
 
 int is_opcocde(char* temp) {
@@ -304,17 +324,15 @@ int is_valid_string(char* temp) {
 }
 
 Token create_token(TokenType type, char* val, int line, int collumn, addressing_mode mode) {
-    Token *token = malloc(sizeof(Token));
-    if (token == NULL) {
-        memory_allocation_failure();
-    }
-    token->type = type;
-    token->val = val;
-    token->line = line;
-    token->collumn = collumn;
-    token->mode = mode;
+    Token token;
+    
+    token.type = type;
+    token.val = val;
+    token.line = line;
+    token.collumn = collumn;
+    token.mode = mode;
 
-    return *token;
+    return token;
 }
 
 void print_token_list(Token* tokens) {
@@ -326,6 +344,68 @@ void print_token_list(Token* tokens) {
         }
         printf("%s (%u)\n", tokens[i].val, tokens[i].type);
     }
+}
+
+void clear_token_arr(Token *tokens) {
+    int i;
+    for (i = 0; tokens[i].type != TOKEN_EOF; i++) {
+        if (tokens[i].val != NULL && tokens[i].type != TOKEN_COMMA) {
+        free(tokens[i].val); 
+        }
+    }
+    free(tokens);  
+}
+    
+   /* Token* curr = tokens;
+    while (curr->type != TOKEN_EOF) {
+        if (curr->type == TOKEN_COMMA) {
+            curr++;
+            continue;
+        }
+        free(curr->val);
+        curr++;
+    }
+    free(tokens);*/
+
+TokenList* create_token_list() {
+    TokenList* list = malloc(sizeof(TokenList));
+    if (list == NULL) {
+        memory_allocation_failure();
+    }
+    list->head = NULL;
+    return list;
+}
+
+void add_token(TokenList* token_list, Token* token) {
+    if (token_list->head == NULL) {
+        token_list->head = token;
+    } else {
+        Token* current = token_list->head;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = token;
+    }
+    token->next = NULL;  
+}
+    
+void clear_token_list(TokenList* token_list) {
+    Token* curr = token_list->head;
+    Token* next;
+    while (curr != NULL) {
+        next = curr->next;
+        if (curr->type == TOKEN_COMMA) {
+            free(curr);
+            curr = next;
+            continue;
+        }
+        else {
+            free(curr->val);
+            free(curr);
+            curr = next;
+        }
+    }
+    free(token_list);
 }
 
 char* read_file(const char* filename) {

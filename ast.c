@@ -328,7 +328,10 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
        if (temp->type == TOKEN_EOF) {
         if (token->type == TOKEN_LABEL) {
             directiveRef* found = lookup_directive(directive_table, token->val);
-            node->data.directive.value = token->val;
+            node->data.directive.value = strdup(token->val);
+            if (node->data.directive.value == NULL) {
+                memory_allocation_failure();
+            }
             if (found != NULL) {
                 if (found->directive_type != ENTRY_DIRECTTIVE) {
                     printf("panic! at line %d: the label %s was already defined as \"extern\"\n", token->line, token->val);
@@ -357,7 +360,11 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
        if (temp->type == TOKEN_EOF) {
         if (token->type == TOKEN_LABEL) {
             directiveRef* found = lookup_directive(directive_table, token->val);
-            node->data.directive.value = token->val;
+            /*node->data.directive.value = token->val;*/
+            node->data.directive.value = strdup(token->val);
+            if (node->data.directive.value == NULL) {
+                memory_allocation_failure();
+            }
             if (found != NULL) {
                 if (found->directive_type != EXTERN_DIRECTIVE) {
                     printf("panic! at line %d: the label %s was already defined as \"entry\"\n", token->line, token->val);
@@ -512,7 +519,50 @@ void insert_node(ASTNodeList* list, ASTNode* node) {
 }
 
 void free_node_list(ASTNodeList* list) {
-    
+    ASTNode* curr = list->head;
+    ASTNode* temp; 
+
+    while (curr != NULL) {
+        temp = curr;
+        curr = curr->next;
+        if (temp->type == AST_INSTRUCTION) {
+           free_instruction_node(temp); 
+        }
+        else if (temp->type == AST_DIRECTIVE) {
+            free_directive_node(temp);
+        }
+        else if (temp->type == AST_LABEL) {
+           if (temp->data.label.definition_node->type == AST_INSTRUCTION) {
+            free_instruction_node(temp->data.label.definition_node);
+            free(temp->data.label.name);
+            free(temp);
+           }
+           else if (temp->data.label.definition_node->type == AST_DIRECTIVE) {
+            free_directive_node(temp->data.label.definition_node);
+            free(temp->data.label.name);
+            free(temp);
+           }
+        }
+    }
+}
+
+void free_instruction_node(ASTNode* node) {
+    free(node->data.instruction.name);
+    if (node->data.instruction.arg1 != NULL) {
+        free(node->data.instruction.arg1);
+    }
+    if (node->data.instruction.arg2 != NULL) {
+        free(node->data.instruction.arg2);
+    }
+    free(node);
+}
+
+void free_directive_node(ASTNode* node) {
+    free(node->data.directive.directive);
+    if ((node->data.directive.value) != NULL) {
+        free(node->data.directive.value);
+    }
+    free(node);
 }
 
 void print_node_list(ASTNodeList* list) {

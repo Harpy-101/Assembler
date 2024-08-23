@@ -1,6 +1,7 @@
 #ifndef TRANSLETOR_H
 #define TRANSLETOR_H
 
+#include "lexer.h"
 #include "symbol_table.h"
 #include <stdint.h>
 #include <string.h>
@@ -82,6 +83,7 @@ typedef struct {
     directWord* direct_word;
     WordList* code_list;
     WordList* data_list;
+    TokenList* token_list;
     imidiateWord* imidiate_word;
     registerWord* register_word;
     ASTNodeList* node_list;

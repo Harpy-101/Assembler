@@ -130,6 +130,7 @@ void clean_symbol_table(SymbolTable* hash_table) {
             Symbol* temp = symbol;
             symbol = symbol->next;
             free(temp->name);
+            temp->name = NULL;
             free(temp);
         }
     }
@@ -233,10 +234,14 @@ void add_unresolved_label(char* name, int* address, Word* word, unresolvedLabelR
 
 void clear_unresolved_list(unresolvedLabelRefList* list) {
     unresolvedLabelRef* node = list->head;
+    unresolvedLabelRef* temp;
     while (node) {
-        free(node->name);
+        temp = node;
         node = node->next;
+        free(temp->name);
+        free(temp);
     }
+    list->head = NULL;
 }
 
 char* strdup(const char* src) {

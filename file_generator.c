@@ -19,6 +19,7 @@ void create_object_file(Shed* shed, WordList* code_list, WordList* data_list) {
 
     char* ob_file_name = add_suffix_to_file_name(shed->file_name, ".ob", OUTPUT);
     FILE* ob_file = fopen(ob_file_name, "w");
+    free(ob_file_name);
 
     code_word_count = code_list->tail->address + 1;
     data_word_count = data_list->tail->address + 1;
@@ -110,6 +111,8 @@ void create_extern_and_entry_files(Shed* shed) {
     char* ext_file_name = add_suffix_to_file_name(shed->file_name, ".ext", OUTPUT);
     FILE* ent_file = fopen(ent_file_name, "w");
     FILE* ext_file = fopen(ext_file_name, "w");
+    free(ent_file_name);
+    free(ext_file_name);
 
     while (curr != NULL) {
         if (curr->directive_type == ENTRY_DIRECTTIVE) {

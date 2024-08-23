@@ -674,13 +674,14 @@ void add_word_node(WordList* list, Word* word) {
 }
 
 void clear_word_list(WordList* list) {
-    WordNode* current = list->head;
+    WordNode* curr = list->head;
     WordNode* next;
 
-    while (current != NULL) {
-        next = current->next;
-        free(current);
-        current = next;
+    while (curr != NULL) {
+        next = curr->next;
+        free(curr->word);
+        free(curr);
+        curr = next;
     }
 
     list->head = NULL;

@@ -26,14 +26,19 @@ typedef enum {
     IGNORE = 0
 } addressing_mode;
 
-typedef struct {
+typedef struct Token {
     TokenType type;
     char* val;
     int line;
     int collumn;
     addressing_mode mode;
     char* origin;
+    struct Token* next;
 } Token;
+
+typedef struct {
+    Token* head;
+} TokenList;
 
 
 int is_special_char(int c);
@@ -46,8 +51,12 @@ int is_label(MacroList* macro_list, char* temp);
 int is_directive(char* temp); 
 int is_valid_int(char* temp);
 int is_valid_string(char* temp);
-Token* tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag); 
+void tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag, Token* tokens); 
 void print_token_list(Token* tokens);
-void remove_collon(char* str); 
+void remove_collon(char* str);
+void clear_token_arr(Token* tokens); 
+void clear_token_list(TokenList* token_list); 
+void add_token(TokenList* token_list, Token* token);
+TokenList* create_token_list(); 
 
 #endif
