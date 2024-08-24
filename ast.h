@@ -8,6 +8,10 @@
 
 #define MAX_ERROR_SIZE 1024
 #define ERROR 0
+#define TWO_ARGS_OPCODE_LIMIT 5
+#define ONE_ARG_OPCODE_LIMIT 9
+#define NO_ARGS_OPCODE_LIMIT 2
+#define MAX_ERROR_BUFFER_SIZE 1024
 
 typedef enum {
     AST_INSTRUCTION, AST_LABEL, AST_DIRECTIVE
@@ -69,7 +73,7 @@ extern int panic;
 ASTNode* create_instrucion_node(Token* token);
 int id_arg_count(Token* token); 
 ASTNode* create_AST_node(Token *tokens, ASTNodeList* node_list, DirectiveTable* directive_table);
-Token* fetch_next_token(Token* token);
+Token* fetch_next_token(Token* token, int* is_first_arg, int* found_commma);
 void excess_code(ASTNode* node, Token* token, int arg_num);
 void print_remaining_tokens(char* buffer, Token* tokens);
 /*ASTNode* create_label_node(HashTable* symbol_table, unresolvedLabelRefList* unresolved_list, Token* token, int* index); */

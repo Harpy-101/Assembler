@@ -4,11 +4,7 @@
 #include <string.h>
 #include "panic.h"
 #include "symbol_table.h"
-/*#include "symbol_table.h"*/
 
-#define TWO_ARGS_OPCODE_LIMIT 5
-#define ONE_ARG_OPCODE_LIMIT 9
-#define NO_ARGS_OPCODE_LIMIT 2
 
 char* two_args_opcode[] = {
     "mov", "cmp", "add", "sub", "lea"
@@ -43,19 +39,24 @@ Opcode opcode_list[] = {
 
 };
 
+/**
+ * @brief This function takes the first token and based on its type, it refers the rest of the array to the relevant node creation function. 
+ * 
+ * @param tokens the token array.
+ * @param node_list node list for storage.
+ * @param directive_table a hash table for extern/entry calls to be used in the translation, and file creation process.
+ * @return ASTNode* 
+ */
 ASTNode* create_AST_node(Token *tokens, ASTNodeList* node_list, DirectiveTable* directive_table) {
     int index;
     Token* curr_token; 
-    /*for (index = 0; tokens[index].type != TOKEN_EOF; index++) { */
         curr_token = tokens;
         if (curr_token->type == TOKEN_INSTRUCTION) {
             ASTNode* instruction_node;
-            /* Add testing to verify the alocation */
             instruction_node = create_instrucion_node(curr_token);
             insert_node(node_list, instruction_node);
         }
         else if (curr_token->type == TOKEN_LABEL_DEFENITION) {
-            /* If the token is a  */
             ASTNode* label_node = create_label_node(tokens, &index, directive_table);
             if (label_node == NULL) {
                 return NULL;
@@ -70,21 +71,6 @@ ASTNode* create_AST_node(Token *tokens, ASTNodeList* node_list, DirectiveTable* 
                 label_node->type = AST_LABEL;
                 label_node->data.label.name = strdup(curr_token->val);
                 insert_node(node_list, label_node);
-            /*Symbol* found;
-            found = lookup_symbol(symbol_table, curr_token->val);
-            if (found == NULL) {
-                add_unresolved_label(curr_token->val, curr_token->line, unresolved_list, curr_token->origin);
-            }
-            else {
-                ASTNode* label_node = malloc(sizeof(ASTNode));
-                if (label_node == NULL) {
-                    memory_allocation_failure();
-                }
-                label_node->type = AST_LABEL;
-                label_node->data.label.name = strdup(curr_token->val);
-               label_node->data.label.definition_node = found->dfinition_node;
-                insert_node(node_list, label_node);
-                */
         }
         else if (curr_token->type == TOKEN_DIRECTIVE) {
             ASTNode* directive_node = create_directive_node(tokens, &index, directive_table);
@@ -94,30 +80,41 @@ ASTNode* create_AST_node(Token *tokens, ASTNodeList* node_list, DirectiveTable* 
             insert_node(node_list, directive_node);
         }
         else {
-            /* return error */
+            return NULL;
         } /* Potentially change the signiture to "void" */
         return NULL;
     }
 /*} */ 
 
+/**
+ * @brief This function checks the syntax and builds an instruction AST node if no error was found.
+ * 
+ * @param token token array
+ * @return ASTNode* a pointer to the newly created node
+ */
 ASTNode* create_instrucion_node(Token* token) {
     ASTNode* node = malloc(sizeof(ASTNode));
     int arg_num, i;
+    int first_arg = 1;
+    int found_comma = 0;
+
     if (node == NULL) {
         memory_allocation_failure();
     }
+
     node->type = AST_INSTRUCTION;
     node->data.instruction.name = strdup(token->val); 
     node->line = token->line;
     
     arg_num = id_arg_count(token);
     for (i = 0; i < arg_num; i++) {
-        token = fetch_next_token(token+1);
-        /* Change this if statment to handle consecutive commas*/
+        token = fetch_next_token(token + 1, &first_arg, &found_comma);
         if (token == NULL) {
             printf("\033[31mpanic!\033[0m at line %d: %s requires %d arguments\n", node->line, node->data.instruction.name, arg_num);
+            ast_creation_error = 1;
             return NULL;
         }
+  
         if (token->type == TOKEN_LABEL_DEFENITION) {
             printf("\033[31mpanic!\033[0m at line %d: you must define a label at the start of the line. If you didn't inted to define a label please remove: \":\" from %s \n", token->line, token->val);
             ast_creation_error = 1;
@@ -125,21 +122,26 @@ ASTNode* create_instrucion_node(Token* token) {
         }
         (i == 0) ? (node->data.instruction.arg1 = strdup(token->val)) : (node->data.instruction.arg2 = strdup(token->val));
         (i == 0) ? (node->data.instruction.arg1_addressing_mode = token->mode) : (node->data.instruction.arg2_addressing_mode = token->mode);
-        /* If the addressing mode isn't valid for this instruction */
     }
-    /*printf("Instruction: %s, Arg1: %s, Arg1 Mode: %d\n", node->data.instruction.name,
-       node->data.instruction.arg1,
-       node->data.instruction.arg01_addressing_mode);*/
+
     check_addressing_mode(node);
     
+    /* checking if their is any tokens left in the array */
     token++;
     if (token->type != TOKEN_EOF) {
         excess_code(node, token, arg_num);
         return NULL;
     }
+
     return node;
 }
 
+/**
+ * @brief This function returns the amount of valid arguments for each known command.
+ * 
+ * @param token the command token
+ * @return int the number of permited arguments.
+ */
 int id_arg_count(Token* token) {
     char* opcode = token->val;
     int i;
@@ -161,30 +163,74 @@ int id_arg_count(Token* token) {
     return -1;
 }
 
-Token* fetch_next_token(Token* token) {
+/**
+ * @brief This function fetches the next token while checking for consecutive commas.
+ * 
+ * @param token a pointer to the current token.
+ * @return Token* the token.
+ */
+/*Token* fetch_next_token(Token* token, int* is_first_arg) {
     Token* curr = token;
     while (curr->type != TOKEN_EOF) {
         if (curr->type == TOKEN_COMMA) {
-            if ((++curr)->type == TOKEN_COMMA) {
-                printf("\033[31mpanic!\033[0m at line %d: consecutive commas\n", token->line);
-                ast_creation_error = 1;
-                return NULL;
-            }
+            if (!*is_first_arg) {    
+                if ((++curr)->type == TOKEN_COMMA) {
+                    printf("\033[31mpanic!\033[0m at line %d: consecutive commas\n", token->line);
+                    ast_creation_error = 1;
+                    return NULL;
+                }
             continue;
+            }
         }
         else {
             return curr;
         }
     }
     return NULL;
+}*/
+
+Token* fetch_next_token(Token* token, int* is_first_arg, int* found_comma) {
+    Token* curr = token;
+
+    while (curr->type != TOKEN_EOF) {
+        if (curr->type == TOKEN_COMMA) {
+            if (*is_first_arg) {
+                printf("\033[31mpanic!\033[0m at line %d: unexpected comma before the first argument\n", curr->line);
+                ast_creation_error = 1;
+                return NULL;
+            } else if (*found_comma) {
+                printf("\033[31mpanic!\033[0m at line %d: consecutive commas found\n", curr->line);
+                ast_creation_error = 1;
+                return NULL;
+            }
+            *found_comma = 1;  
+        } else {
+            if (!*is_first_arg && !*found_comma) {
+                printf("\033[31mpanic!\033[0m at line %d: missing comma between arguments\n", curr->line);
+                ast_creation_error = 1;
+                return NULL;
+            }
+            *is_first_arg = 0;  
+            *found_comma = 0;  
+            return curr;
+        }
+        curr++;
+    }
+
+    return NULL;
 }
 
 
-
+/**
+ * @brief This function checks if excess code is left after a valid node was created. If so, it will be printed.
+ * 
+ * @param node the node that was created.
+ * @param token any tokens after the the valid tokens.
+ * @param arg_num permited argument count.
+ */
 void excess_code(ASTNode* node, Token* token, int arg_num) {
     char* buffer = malloc(MAX_ERROR_SIZE);
     if (node->type == AST_INSTRUCTION) {
-        /* snprintf(buffer, MAX_ERROR_SIZE, "%s instruction can only have %d arguments. Please remove the following characters:", node->data.instruction.name, arg_num);*/
         sprintf(buffer, "%s instruction can only have %d arguments. Please remove the following characters:", node->data.instruction.name, arg_num);
         print_remaining_tokens(buffer, token);
         node->status.type = STATUS_ERROR;
@@ -195,7 +241,6 @@ void excess_code(ASTNode* node, Token* token, int arg_num) {
         return;
     }
     else if (node->type == AST_DIRECTIVE) {
-        /* snprintf(buffer, MAX_ERROR_SIZE, "%s directive can only have %d arguments. Please remove the following characters:", node->data.directive.value, 1); */
         sprintf(buffer, "%s directive can only have %d arguments. Please remove the following characters:", node->data.directive.value, 1);
         print_remaining_tokens(buffer, token);
         node->status.type = STATUS_ERROR;
@@ -205,12 +250,17 @@ void excess_code(ASTNode* node, Token* token, int arg_num) {
         ast_creation_error = 1;
         return;
     }
-    /* check if there is a need to add a case for labels */
 }
 
+/**
+ * @brief This function prints the remaining tokens left after the valid tokens in order to show the user what he needs to remove to make his command legal.
+ * 
+ * @param buffer 
+ * @param tokens 
+ */
 void print_remaining_tokens(char* buffer, Token* tokens) {
     char* buffer_end = buffer + strlen(buffer);
-    size_t buffer_size = 1024;
+    size_t buffer_size = MAX_ERROR_BUFFER_SIZE;
     size_t remaining_size = buffer_size - (buffer_end - buffer);
     
     strcat(buffer, "\"");
@@ -237,53 +287,28 @@ void print_remaining_tokens(char* buffer, Token* tokens) {
 }
 
 /**
- * @brief Create a label node object
+ * @brief This function identify the type of label that needs to be created and delegates the creation task to the relevant functions.
  * 
- * @param symbol_table 
- * @param unresolved_list 
- * @param token 
- * @param index 
- * @return ASTNode*
- * 
- * todo Add a handling function for excess code for all of the directive options
+ * @param token the token array. 
+ * @param index can be ignored. mainly used for testing.
+ * @param directive_table 
+ * @return ASTNode* a poiter to the newly created label node and it's defenition node.
  */
 ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_table) {
     ASTNode* node = malloc(sizeof(ASTNode));
-    /*Token* label; */
     if (node == NULL) {
         memory_allocation_failure();
     }
 
-    /* label = token; */
     node->data.label.name = strdup(token->val);
     node->type = AST_LABEL;
     node->line = token->line;
 
     token++;
     if (token->type == TOKEN_INSTRUCTION) {
-    /* Add testing in order to identify the kind of token and process it acordingly
-       After doing so, link the definition node to the symbol table. */
-        /* Symbol* found; */
-        /*Symbol* symbol;*/
         ASTNode* definition_node;
-        /* Old implementation: 
-        definition_node = create_instrucion_node(token, index);
-        found = lookup_symbol(symbol_table, label->val);
-        found->dfinition_node = definition_node;
-        node->data.label.definition_node = definition_node;
-        node->line = token->line;
-        node->data.label.name = strdup(token->val);
-        node->type = AST_LABEL;
-        return node;
-        */
-        /* New implementation: */
         definition_node = create_instrucion_node(token);
-        /*
-        insert_symbol(symbol_table, node->data.label.name, token->line);
-        symbol = lookup_symbol(symbol_table, node->data.label.name);
-        symbol->dfinition_node = definition_node;
-        node->data.label.definition_node = symbol->dfinition_node;
-        */
+
         node->data.label.definition_node = definition_node;
         node->line = token->line;
         node->type = AST_LABEL;
@@ -297,7 +322,6 @@ ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_t
     }
  
     else {
-        /* Return error */
         printf("\033[31mpanic!\033[0m at line %d: expected a label defenition after: %s\n", node->line, (token-1)->val);
         ast_creation_error = 1;
         return NULL;
@@ -305,6 +329,14 @@ ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_t
     return NULL;
 }
 
+/**
+ * @brief This function creates a directive node. it also adds any extern/entry directive call to the directive table.
+ * 
+ * @param token the token array.
+ * @param index can be ignored. used for testing.
+ * @param directive_table 
+ * @return ASTNode* a pointer to the newly created directive node.
+ */
 ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directive_table) {
     ASTNode* node = malloc(sizeof(ASTNode));
     node->data.directive.directive = strdup(token->val);
@@ -317,7 +349,7 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
             free(node);
             return NULL;
         }
-        /*token++; */
+
         node->data.directive.value = combine_tokens(token, COMBINE_DATA);
         return node; 
     }
@@ -346,13 +378,6 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
             else {
                 insert_directive(directive_table, node->data.directive.value, ENTRY_DIRECTTIVE);
             }
-            /*Symbol* found = lookup_symbol(symbol_table, token->val);
-            if (found->scope == UNDEFINED) {
-                found->scope = ENTRY;   
-            }
-            else{
-                printf(""\033[31mpanic!\033[0m at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
-            }*/
         }
         else {
             printf("\033[31mpanic!\033[0m at line %d: the use of the keyword \"%s\" can only be used with labels\n", token->line, (token-1)->val);
@@ -381,16 +406,6 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
             else {
                 insert_directive(directive_table, node->data.directive.value, EXTERN_DIRECTIVE);
             }
-            /*Symbol* found = lookup_symbol(symbol_table, token->val);
-            if (found == NULL) {
-                return NULL;
-            }
-            else if (found->scope == UNDEFINED || found->scope == EXTERN) {
-                found->scope = EXTERN;   
-            }
-            else{
-                printf(""\033[31mpanic!\033[0m at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
-            }*/
         }
         else {
             printf("\033[31mpanic!\033[0m at line %d: the use of the keyword \"%s\" can only be used on labels\n", token->line, (token-1)->val);
@@ -401,8 +416,15 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
     return node;
 }
 
+/**
+ * @brief This function takes individual tokens that can be bunched up together. Numbers form a data directive call, or several strings in a string directive call.
+ * 
+ * @param tokens the token array.
+ * @param c_type string/data
+ * @return char* a pointer to the combined string.
+ */
 char* combine_tokens(Token* tokens, combine_type c_type) {
-    int total_length;
+    int total_length = 0;
     Token* curr = tokens;
     char* combined_string;
     char* ptr;
@@ -422,60 +444,54 @@ char* combine_tokens(Token* tokens, combine_type c_type) {
         while (curr->type != TOKEN_EOF) {
             strcpy(ptr, curr->val);
             ptr += strlen(curr->val);
-            /**ptr = ' '; */
             ptr++;
             curr++;
         }
         *ptr = '\0';
         return combined_string;
     }
-    else {
-        /* Calculate the total length needed */
-   while (curr->type != TOKEN_EOF) {
-        /* Only count valid tokens (numbers and commas)*/
-        if (curr->type == TOKEN_NUMBER || curr->type == TOKEN_COMMA) {
-            total_length += strlen(curr->val) + 1; /* +1 for a potential space or comma*/
-        } else {
-            printf("Error: Invalid token encountered: %s\n", curr->val);
-            ast_creation_error = 1;
-            return NULL; /* Return NULL or handle error as needed */
+    else { 
+        while (curr->type != TOKEN_EOF) {
+            if (curr->type == TOKEN_NUMBER || curr->type == TOKEN_COMMA) {
+                total_length += strlen(curr->val) + 1;
+            }else{
+                printf("Error: Invalid token encountered: %s\n", curr->val);
+                ast_creation_error = 1;
+                return NULL; 
+            }
+            curr++;
         }
-        curr++;
-    }
 
-    /*Allocate memory for the combined string*/
-    combined_string = malloc(total_length + 1); /* +1 for the null terminator*/
-    if (combined_string == NULL) {
-        memory_allocation_failure();
-    }
-
-    /* Combine the valid tokens*/
-    ptr = combined_string;
-    curr = tokens;
-    while (curr->type != TOKEN_EOF) {
-        if (curr->type == TOKEN_NUMBER || curr->type == TOKEN_COMMA) {
-            strcpy(ptr, curr->val);
-            ptr += strlen(curr->val);
-
-            /* Add a space after a number, or leave as is if it's a comma */
-            /*if (curr->type == TOKEN_NUMBER) {
-                *ptr = ' ';
-                ptr++;
-            }*/
+        combined_string = malloc(total_length + 1); 
+        if (combined_string == NULL) {
+            memory_allocation_failure();
         }
-        curr++;
-    }
 
-    /* Remove the last space and add a null terminator */
-    if (ptr > combined_string && *(ptr - 1) == ' ') {
-        ptr--;
-    }
-    *ptr = '\0';
+        ptr = combined_string;
+        curr = tokens;
+        while (curr->type != TOKEN_EOF) {
+            if (curr->type == TOKEN_NUMBER || curr->type == TOKEN_COMMA) {
+                strcpy(ptr, curr->val);
+                ptr += strlen(curr->val);
+            }
+            curr++;
+        }
 
-    return combined_string;
+        if (ptr > combined_string && *(ptr - 1) == ' ') {
+            ptr--;
+        }
+        *ptr = '\0';
+
+        return combined_string;
     }
 }
 
+/**
+ * @brief This function verifies the comma placement in a data directive call. 
+ * 
+ * @param token the token array.
+ * @return int 1 for succses.
+ */
 int verify_comma_seperation_for_data_directive(Token* token) {
     while (token->type != TOKEN_EOF) {
         if (token->type == TOKEN_NUMBER) {
@@ -483,8 +499,7 @@ int verify_comma_seperation_for_data_directive(Token* token) {
             if (token->type == TOKEN_EOF) {
                 return 1;
             }
-            if (token->type != TOKEN_COMMA) {
-                /* Add a propper error handling function */
+            if (token->type != TOKEN_COMMA) { 
                 printf("\033[31mpanic!\033[0m at line: %d. data syntax isn't valid, expected a comma after: %s\n", token->line, (token-1)->val);
                 ast_creation_error = 1;
                 return ERROR;
@@ -499,14 +514,12 @@ int verify_comma_seperation_for_data_directive(Token* token) {
     }
     return 1;
 }
-/* Check if there is a need to handle several strings */
-int verify_string_directive_syntax(Token* token) {
-    while(token->type != TOKEN_EOF) {
 
-    }
-    return 1;
-}
-
+/**
+ * @brief This function creats a node list.
+ * 
+ * @return ASTNodeList* a pointer to the node list.
+ */
 ASTNodeList* create_node_list() {
     ASTNodeList* list = malloc(sizeof(ASTNodeList));
     if (!list) {
@@ -516,6 +529,12 @@ ASTNodeList* create_node_list() {
     return list;
 }
 
+/**
+ * @brief Node insertion function.
+ * 
+ * @param list the node list.
+ * @param node the node to be inserted.
+ */
 void insert_node(ASTNodeList* list, ASTNode* node) {
     if (!list->head) {
         list->head = node;
@@ -527,9 +546,13 @@ void insert_node(ASTNodeList* list, ASTNode* node) {
         }
         temp->next = node;
     }
-    /*node->next = NULL; */
 }
 
+/**
+ * @brief This function frees the node list.
+ * 
+ * @param list the node list.
+ */
 void free_node_list(ASTNodeList* list) {
     ASTNode* curr = list->head;
     ASTNode* temp; 
@@ -562,6 +585,11 @@ void free_node_list(ASTNodeList* list) {
     }
 }
 
+/**
+ * @brief This function frees an instruction node,
+ * 
+ * @param node 
+ */
 void free_instruction_node(ASTNode* node) {
     free(node->data.instruction.name);
     if (node->data.instruction.arg1 != NULL) {
@@ -573,6 +601,11 @@ void free_instruction_node(ASTNode* node) {
     free(node);
 }
 
+/**
+ * @brief This function frees a directive node.
+ * 
+ * @param node 
+ */
 void free_directive_node(ASTNode* node) {
     free(node->data.directive.directive);
     if ((node->data.directive.value) != NULL) {
@@ -581,6 +614,11 @@ void free_directive_node(ASTNode* node) {
     free(node);
 }
 
+/**
+ * @brief This function prints the node list (used for testing).
+ * 
+ * @param list the node list.
+ */
 void print_node_list(ASTNodeList* list) {
     ASTNode* curr = list->head;
     for (; curr != NULL; curr = curr->next) {
@@ -607,6 +645,12 @@ void print_node_list(ASTNodeList* list) {
     }
 }
 
+/**
+ * @brief This function checks if the addressing modes of of the arguments are actually permitied based on the the opcode used.
+ * 
+ * @param node the node being checked.
+ * @return int 0 if all is well, 1 if an ilegal combenation was rquested.
+ */
 int check_addressing_mode(ASTNode* node) {
     int i, len = sizeof(opcode_list) / sizeof(opcode_list[0]);
     int err = 0;
@@ -625,28 +669,4 @@ int check_addressing_mode(ASTNode* node) {
         }
     }
     return err;
-}/*
-    if (opcode_list[i].arg1_allowed_modes == 0 && node->data.instruction.arg1 != NULL) {
-        printf(""\033[31mpanic!\033[0m at line %d: Unexpected argument for instruction %s\n", node->line, opcode_list[i].opcode);
-        err = 1;
-        continue;
-    }
-
-    if (node->data.instruction.arg2 != NULL && opcode_list[i].arg2_allowed_modes == 0) {
-        printf(""\033[31mpanic!\033[0m at line %d: Unexpected second argument for instruction %s\n", node->line, opcode_list[i].opcode);
-        err = 1;
-        continue;
-    }
-
-    if (!(node->data.instruction.arg1_addressing_mode & opcode_list[i].arg1_allowed_modes) && node->data.instruction.arg1 != NULL) {
-        printf(""\033[31mpanic!\033[0m at line %d: The addressing mode for the first argument: %s isn't valid\n", node->line, node->data.instruction.arg1);
-        err = 1;
-    }
-
-    if (!(node->data.instruction.arg2_addressing_mode & opcode_list[i].arg2_allowed_modes) && node->data.instruction.arg2 != NULL) {
-        printf(""\033[31mpanic!\033[0m at line %d: The addressing mode for the second argument: %s isn't valid\n", node->line, node->data.instruction.arg2);
-        err = 1;
-    }
 }
-}
-*/
