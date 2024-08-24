@@ -1,3 +1,4 @@
+#include "error_flags.h"
 #include "file_generator.h"
 #include "lexer.h"
 #include "preprocessor.h"
@@ -28,14 +29,14 @@ int main(int argc, char *argv[]) {
             char*output_file_name;
 
             if (!input_file) {
-                printf("panic! unable to open %s\n", file_name);
+                printf(""\033[31mpanic!\033[0m unable to open %s\n", file_name);
                 return EXIT_FAILURE;
             }
 
             output_file_name = add_suffix_to_file_name(file_name, ".am", OUTPUT);
             output_file = fopen(output_file_name, "w");
             if (output_file == NULL) {
-                printf("panic! unable to create \".am\" file\n");
+                printf(""\033[31mpanic!\033[0m unable to create \".am\" file\n");
                 return EXIT_FAILURE;
             }
 
@@ -97,7 +98,7 @@ int main(int argc, char *argv[]) {
         Shed* shed = malloc(sizeof(Shed));
         /*int token_creation_error = 0, ast_creation_error = 0, translation_error = 0;*/
         if (!input_file) {
-            printf("panic! unable to open %s\n", file_name);
+            printf("\033[31mpanic!\033[0m unable to open %s\n", file_name);
             free(file_name);
             continue;
         }
@@ -105,7 +106,7 @@ int main(int argc, char *argv[]) {
         output_file_name = add_suffix_to_file_name(file_name, ".am", OUTPUT);
         output_file = fopen(output_file_name, "w");
         if (output_file == NULL) {
-            printf("panic! unable to create \".am\" file\n");
+            printf("\033[31mpanic!\033[0m unable to create \".am\" file\n");
             fclose(input_file);
             free(file_name);
             free(output_file_name);
@@ -126,7 +127,7 @@ int main(int argc, char *argv[]) {
 
         output_file = fopen(output_file_name, "r");
         if (output_file == NULL) {
-            printf("panic! unable to open %s for reading\n", output_file_name);
+            printf("\033[31mpanic!\033[0m unable to open %s for reading\n", output_file_name);
             clear_macro_list(macro_list);
             free(file_name);
             free(output_file_name);
@@ -156,11 +157,10 @@ int main(int argc, char *argv[]) {
 
         fclose(output_file);
 
-        if (token_creation_error == 0 && ast_creation_error == 0 && translation_error == 0) {
-            translate(shed, shed->code_list, &translation_error);
-            if (translation_error == 0) {
-                create_output_files(shed);
-            }
+       
+        translate(shed, shed->code_list);
+        if (translation_error == 0 && ast_creation_error == 0 && token_creation_error == 0) {
+            create_output_files(shed);
         }
 
         clear_macro_list(macro_list);

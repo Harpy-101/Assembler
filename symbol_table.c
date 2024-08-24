@@ -66,7 +66,7 @@ void insert_symbol(SymbolTable* hash_table, char* name, int* line_address) {
     symbol->next = hash_table->map[hash_index];
     hash_table->map[hash_index] = symbol;
     hash_table->count++;
-    printf("Inserted symbol: %s at address: 0x%x in hash index: %d\n", symbol->name, *symbol->address, hash_index);
+    /*printf("Inserted symbol: %s at address: 0x%x in hash index: %d\n", symbol->name, *symbol->address, hash_index);*/
 }
 
 void insert_directive(DirectiveTable* directive_table, char* name, int directive_type) {
@@ -92,7 +92,7 @@ void insert_directive(DirectiveTable* directive_table, char* name, int directive
     directive->next = directive_table->map[hash_index];
     directive_table->map[hash_index] = directive;
     directive_table->count++;
-    printf("Inserted directive: %s in hash index: %d\n", directive->name, hash_index);
+    /*printf("Inserted directive: %s in hash index: %d\n", directive->name, hash_index);*/
 }
 
 Symbol* lookup_symbol(SymbolTable* hash_table, char* name) {
@@ -100,7 +100,7 @@ Symbol* lookup_symbol(SymbolTable* hash_table, char* name) {
     Symbol* symbol = hash_table->map[hash_index];
     
     while (symbol != NULL) {
-        printf("Comparing '%s' with '%s'\n", symbol->name, name);
+        /*printf("Comparing '%s' with '%s'\n", symbol->name, name);*/
         if (strcmp(symbol->name, name) == 0) {
             return symbol;
         }

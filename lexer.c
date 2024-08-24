@@ -146,7 +146,7 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
                     /*insert_symbol(symbol_table, token.val, line_number); */
                     continue; 
                 }
-                printf("panic! at line %d: a label can't be the same name as an opcode, register or a macro\n", line_number);
+                printf("\033[31mpanic!\033[0m at line %d: a label can't be the same name as an opcode, register or a macro\n", line_number);
                 token_creation_error = 1;
             }
             free(temp);
@@ -197,8 +197,8 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
                     ptr++;
                     continue;
                 }
+                free(temp);
             }
-            free(temp);
             ptr = start-1;
         }
         /* Id comma */
@@ -232,7 +232,7 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
             char* temp;
             while (!isspace(*ptr) && (*ptr) != ',') ptr++;
             temp = strndup(start, ptr - start);
-            if (1 && !is_macro(macro_list, temp)) {
+            if (1 && !is_macro(macro_list, temp) && mode == TBD) {
                 Token token;
                 (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                 token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
@@ -244,13 +244,14 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
             free(temp);
             ptr = start;
         }
-        else {
+        if (1) {
            char* start = ptr;
             char* temp;
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
             token_creation_error = 1;
-            printf("panic! at line %d: %s is an undefined word\n", line_number, temp);
+            printf("\033[31mpanic!\033[0m at line %d: %s is an undefined word and/or uses the wrong addressing mode \n", line_number, temp);
+            token_creation_error = 1;
             /* Add a way to signal there was an error in the tokenizetion stage while build the AST */
         }
 

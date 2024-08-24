@@ -1,4 +1,5 @@
 #include "ast.h"
+#include "error_flags.h"
 #include "lexer.h"
 #include <string.h>
 #include "panic.h"
@@ -114,10 +115,12 @@ ASTNode* create_instrucion_node(Token* token) {
         token = fetch_next_token(token+1);
         /* Change this if statment to handle consecutive commas*/
         if (token == NULL) {
+            printf("\033[31mpanic!\033[0m at line %d: %s requires %d arguments\n", node->line, node->data.instruction.name, arg_num);
             return NULL;
         }
         if (token->type == TOKEN_LABEL_DEFENITION) {
-            printf("Panic at line: %d: you must define a label in the start of the line. If you didn't inted to define a label please remove: \":\" from %s \n", token->line, token->val);
+            printf("\033[31mpanic!\033[0m at line %d: you must define a label at the start of the line. If you didn't inted to define a label please remove: \":\" from %s \n", token->line, token->val);
+            ast_creation_error = 1;
             return NULL;
         }
         (i == 0) ? (node->data.instruction.arg1 = strdup(token->val)) : (node->data.instruction.arg2 = strdup(token->val));
@@ -163,7 +166,8 @@ Token* fetch_next_token(Token* token) {
     while (curr->type != TOKEN_EOF) {
         if (curr->type == TOKEN_COMMA) {
             if ((++curr)->type == TOKEN_COMMA) {
-                printf("panic! consecutive commas\n");
+                printf("\033[31mpanic!\033[0m at line %d: consecutive commas\n", token->line);
+                ast_creation_error = 1;
                 return NULL;
             }
             continue;
@@ -187,6 +191,7 @@ void excess_code(ASTNode* node, Token* token, int arg_num) {
         node->status.error_code = buffer;
         node->line = token->line;
         ASTNode_error(node);
+        ast_creation_error  = 1;
         return;
     }
     else if (node->type == AST_DIRECTIVE) {
@@ -197,6 +202,7 @@ void excess_code(ASTNode* node, Token* token, int arg_num) {
         node->status.error_code = buffer;
         node->line = token->line;
         ASTNode_error(node);
+        ast_creation_error = 1;
         return;
     }
     /* check if there is a need to add a case for labels */
@@ -227,7 +233,7 @@ void print_remaining_tokens(char* buffer, Token* tokens) {
         buffer_end += token_length + 1;
         remaining_size -= token_length + 1;
     }
-    strcat(buffer_end, "\"\n");
+    strcat(buffer_end, "\"");
 }
 
 /**
@@ -251,6 +257,7 @@ ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_t
     /* label = token; */
     node->data.label.name = strdup(token->val);
     node->type = AST_LABEL;
+    node->line = token->line;
 
     token++;
     if (token->type == TOKEN_INSTRUCTION) {
@@ -291,7 +298,8 @@ ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_t
  
     else {
         /* Return error */
-        printf("panic! at line: %d: expected a label defenition after: %s\n", token->line, (token-1)->val);
+        printf("\033[31mpanic!\033[0m at line %d: expected a label defenition after: %s\n", node->line, (token-1)->val);
+        ast_creation_error = 1;
         return NULL;
     }
     return NULL;
@@ -331,7 +339,8 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
             }
             if (found != NULL) {
                 if (found->directive_type != ENTRY_DIRECTTIVE) {
-                    printf("panic! at line %d: the label %s was already defined as \"extern\"\n", token->line, token->val);
+                    printf("\033[31mpanic!\033[0m at line %d: the label %s was already defined as \"extern\"\n", token->line, token->val);
+                    ast_creation_error = 1;
                 }
             }
             else {
@@ -342,11 +351,12 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
                 found->scope = ENTRY;   
             }
             else{
-                printf("panic! at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
+                printf(""\033[31mpanic!\033[0m at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
             }*/
         }
         else {
-            printf("panic! at line %d: the use of the keyword \"%s\" can only be used on labels\n", token->line, (token-1)->val);
+            printf("\033[31mpanic!\033[0m at line %d: the use of the keyword \"%s\" can only be used with labels\n", token->line, (token-1)->val);
+            ast_creation_error = 1;
         }
        }
     }
@@ -364,7 +374,8 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
             }
             if (found != NULL) {
                 if (found->directive_type != EXTERN_DIRECTIVE) {
-                    printf("panic! at line %d: the label %s was already defined as \"entry\"\n", token->line, token->val);
+                    printf("\033[31mpanic!\033[0m at line %d: the label %s was already defined as \"entry\"\n", token->line, token->val);
+                    ast_creation_error = 1;
                 }
             }
             else {
@@ -378,11 +389,12 @@ ASTNode* create_directive_node(Token* token, int* index, DirectiveTable* directi
                 found->scope = EXTERN;   
             }
             else{
-                printf("panic! at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
+                printf(""\033[31mpanic!\033[0m at line %d: redefenition of the scope for label: %s\n", token->line, token->val);
             }*/
         }
         else {
-            printf("panic! at line %d: the use of the keyword \"%s\" can only be used on labels\n", token->line, (token-1)->val);
+            printf("\033[31mpanic!\033[0m at line %d: the use of the keyword \"%s\" can only be used on labels\n", token->line, (token-1)->val);
+            ast_creation_error = 1;
         }
        }
     }
@@ -425,6 +437,7 @@ char* combine_tokens(Token* tokens, combine_type c_type) {
             total_length += strlen(curr->val) + 1; /* +1 for a potential space or comma*/
         } else {
             printf("Error: Invalid token encountered: %s\n", curr->val);
+            ast_creation_error = 1;
             return NULL; /* Return NULL or handle error as needed */
         }
         curr++;
@@ -472,13 +485,15 @@ int verify_comma_seperation_for_data_directive(Token* token) {
             }
             if (token->type != TOKEN_COMMA) {
                 /* Add a propper error handling function */
-                printf("panic! at line: %d. data syntax isn't valid, expected a comma after: %s\n", token->line, (token-1)->val);
+                printf("\033[31mpanic!\033[0m at line: %d. data syntax isn't valid, expected a comma after: %s\n", token->line, (token-1)->val);
+                ast_creation_error = 1;
                 return ERROR;
             }
             token++;
         }
         else {
-            printf("panic! at line %d. data syntax isn't valid, expected a number after: %s\n", token->line, (token-1)->val);
+            printf("\033[31mpanic!\033[0m at line %d. data syntax isn't valid, expected a number after: %s\n", token->line, (token-1)->val);
+            ast_creation_error = 1;
             return ERROR;
         }
     }
@@ -529,7 +544,11 @@ void free_node_list(ASTNodeList* list) {
             free_directive_node(temp);
         }
         else if (temp->type == AST_LABEL) {
-           if (temp->data.label.definition_node->type == AST_INSTRUCTION) {
+           if (temp->data.label.definition_node == NULL) {
+                free(temp->data.label.name);
+                free(temp);
+           }
+           else if (temp->data.label.definition_node->type == AST_INSTRUCTION) {
             free_instruction_node(temp->data.label.definition_node);
             free(temp->data.label.name);
             free(temp);
@@ -594,11 +613,13 @@ int check_addressing_mode(ASTNode* node) {
     for (i = 0; i < len; i++) {
         if (strcmp(node->data.instruction.name, opcode_list[i].opcode) == 0) {
             if (!(node->data.instruction.arg1_addressing_mode & opcode_list[i].arg1_allowed_modes) && node->data.instruction.arg1 != NULL) {
-                printf("panic! at line %d: The addressing mode for the first argument: %s isn't vaild\n", node->line, node->data.instruction.arg1);
+                printf("\033[31mpanic!\033[0m at line %d: The addressing mode for the first argument: %s isn't vaild\n", node->line, node->data.instruction.arg1);
+                ast_creation_error = 1;
                 err = 1;
             }
             if (!(node->data.instruction.arg2_addressing_mode & opcode_list[i].arg2_allowed_modes) && node->data.instruction.arg2 != NULL) {
-                printf("panic! at line %d: The addressing mode for the second argument: %s isn't valid\n", node->line, node->data.instruction.arg2);
+                printf("\033[31mpanic!\033[0m at line %d: The addressing mode for the second argument: %s isn't valid\n", node->line, node->data.instruction.arg2);
+                ast_creation_error = 1;
                 err = 1;
             }
         }
@@ -606,24 +627,24 @@ int check_addressing_mode(ASTNode* node) {
     return err;
 }/*
     if (opcode_list[i].arg1_allowed_modes == 0 && node->data.instruction.arg1 != NULL) {
-        printf("panic! at line %d: Unexpected argument for instruction %s\n", node->line, opcode_list[i].opcode);
+        printf(""\033[31mpanic!\033[0m at line %d: Unexpected argument for instruction %s\n", node->line, opcode_list[i].opcode);
         err = 1;
         continue;
     }
 
     if (node->data.instruction.arg2 != NULL && opcode_list[i].arg2_allowed_modes == 0) {
-        printf("panic! at line %d: Unexpected second argument for instruction %s\n", node->line, opcode_list[i].opcode);
+        printf(""\033[31mpanic!\033[0m at line %d: Unexpected second argument for instruction %s\n", node->line, opcode_list[i].opcode);
         err = 1;
         continue;
     }
 
     if (!(node->data.instruction.arg1_addressing_mode & opcode_list[i].arg1_allowed_modes) && node->data.instruction.arg1 != NULL) {
-        printf("panic! at line %d: The addressing mode for the first argument: %s isn't valid\n", node->line, node->data.instruction.arg1);
+        printf(""\033[31mpanic!\033[0m at line %d: The addressing mode for the first argument: %s isn't valid\n", node->line, node->data.instruction.arg1);
         err = 1;
     }
 
     if (!(node->data.instruction.arg2_addressing_mode & opcode_list[i].arg2_allowed_modes) && node->data.instruction.arg2 != NULL) {
-        printf("panic! at line %d: The addressing mode for the second argument: %s isn't valid\n", node->line, node->data.instruction.arg2);
+        printf(""\033[31mpanic!\033[0m at line %d: The addressing mode for the second argument: %s isn't valid\n", node->line, node->data.instruction.arg2);
         err = 1;
     }
 }

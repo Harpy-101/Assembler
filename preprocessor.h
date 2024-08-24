@@ -5,8 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-/*#include "panic.h"*/
 #include "symbol_table.h"
+#include <stdio.h>
 
 typedef enum {
     NORMAL_LINE, DEFINING_MACRO 

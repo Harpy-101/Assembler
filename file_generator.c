@@ -7,6 +7,12 @@
 
 void create_output_files(Shed* shed) {
     create_object_file(shed, shed->code_list, shed->data_list);
+    
+    if (shed->data_list->tail->address > 4096) {
+        printf("\033[31mpanic!\033[0m) Source file requires more memory to run than the host system has to offer. Aborting compilatio\n");
+        return;
+    }
+    
     create_extern_and_entry_files(shed);
 }
 
@@ -26,6 +32,11 @@ void create_object_file(Shed* shed, WordList* code_list, WordList* data_list) {
 
     stich_both_lists(code_list, data_list);
     resolve_unresolved_list(shed);
+
+    if (data_list->tail->address > 4096) {
+        printf("\033[31mpanic!\033[0m) Source file requires more memory to run than the host system has to offer. Aborting compilatio\n");
+        return;
+    }
 
     sprintf(output_text, "   %d  %d\n", code_word_count, data_word_count);    
     fputs(output_text, ob_file);
@@ -58,7 +69,7 @@ void create_object_file(Shed* shed, WordList* code_list, WordList* data_list) {
                 break;
 
             default:
-                printf("panic! unknown word type\n");
+                printf("\033[31mpanic!\033[0m unknown word type\n");
         } 
         fputs(output_text, ob_file);
         curr = curr->next;
@@ -94,7 +105,7 @@ void create_object_file(Shed* shed, WordList* code_list, WordList* data_list) {
                 break;
 
             default:
-                printf("panic! unknown word type\n");
+                printf("\033[31mpanic!\033[0m unknown word type\n");
         }
         fputs(output_text, ob_file);
         curr = curr->next;

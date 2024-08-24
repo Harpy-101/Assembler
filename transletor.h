@@ -109,7 +109,7 @@ void print_direct_word(directWord* word);
 void print_imidiate_word(imidiateWord* word); 
 void print_register_word(registerWord* word); 
 WordNode* translate_instruction_first(Word* first_word ,ASTNode* node, WordList* word_list, Shed* shed);
-void translate(Shed* shed, WordList* code_list, int* transletion_error);
+void translate(Shed* shed, WordList* code_list);
 void print_directive_word(directiveWord* word); 
 WordNode* translate_string_directive (ASTNode* node, WordList* word_list, Shed* shed);
 WordNode* translate_data_directive(ASTNode* node, WordList* word_list, Shed* shed); 

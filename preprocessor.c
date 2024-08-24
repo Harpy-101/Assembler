@@ -1,8 +1,6 @@
 #include "preprocessor.h"
 #include "lexer.h"
 #include "panic.h"
-#include "symbol_table.h"
-#include <stdio.h>
 #include <string.h>
 
 
@@ -36,7 +34,7 @@ int process_file(FILE* input, FILE* output, MacroList* macro_list) {
 
         else if (state == DEFINING_MACRO && strstr(curr_line, "endmacr")) {
             if (is_opcocde(macro_name) || is_register(macro_name)) {
-                printf("panic! at line %d: \"%s\" is a reserved word, and so cannot be used as a macro name\n", line_number, macro_name);
+                printf("\033[31mpanic!\033[0m at line %d: \"%s\" is a reserved word, and so cannot be used as a macro name\n", line_number, macro_name);
                 line_number++;
                 error_detected = 1;
                 continue;
@@ -129,7 +127,7 @@ char* add_suffix_to_file_name(char* curr_file_name, char* new_suffix, useCase us
     if (use_case == OUTPUT) {
     
         if (suffix_start == NULL) {
-            printf("panic! %s can't be processed as it lacks the correct suffix: \".as\"\n", curr_file_name);
+            printf("\033[31mpanic!\033[0m %s can't be processed as it lacks the correct suffix: \".as\"\n", curr_file_name);
             EXIT_FAILURE;
         }
         else {
