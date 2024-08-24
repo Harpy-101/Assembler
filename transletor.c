@@ -569,6 +569,7 @@ void resolve_unresolved_list(Shed* shed) {
             /* Free the resolved node */
             temp = node;
             node = node->next;
+            free(temp->name);
             free(temp);
         } else {
             /* If symbol was not found, mark it as external and move to the next node */

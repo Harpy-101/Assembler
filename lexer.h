@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include "preprocessor.h"
 #include "symbol_table.h"
+#include "error_flags.h"
 
 #define MAX_LINE_LENGTH 256
 
@@ -51,7 +52,7 @@ int is_label(MacroList* macro_list, char* temp);
 int is_directive(char* temp); 
 int is_valid_int(char* temp);
 int is_valid_string(char* temp);
-void tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag, Token* tokens); 
+void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens); 
 void print_token_list(Token* tokens);
 void remove_collon(char* str);
 void clear_token_arr(Token* tokens); 

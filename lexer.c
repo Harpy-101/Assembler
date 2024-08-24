@@ -3,6 +3,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "lexer.h"
+#include "error_flags.h"
 #include "panic.h"
 #include "preprocessor.h"
 
@@ -63,7 +64,7 @@ char* strndup(const char* src, size_t n) {
  * 
  * TODO: Add a case for handling comments at the start of the line (valid)
  * TODO: Add a case for handling comments in the middle of a line (not-valid) */
-void tokenize(char* input, int line_number, MacroList* macro_list, int* token_error_flag, Token* tokens) {
+void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens) {
     int i = 0;
     char* ptr = input;
     /*Token* tokens = malloc(sizeof(Token) * 256); Chnage this into a dynamic structure after tezsting 
@@ -146,7 +147,7 @@ void tokenize(char* input, int line_number, MacroList* macro_list, int* token_er
                     continue; 
                 }
                 printf("panic! at line %d: a label can't be the same name as an opcode, register or a macro\n", line_number);
-                *token_error_flag = 1;
+                token_creation_error = 1;
             }
             free(temp);
             ptr = start;
@@ -248,7 +249,7 @@ void tokenize(char* input, int line_number, MacroList* macro_list, int* token_er
             char* temp;
             while (!isspace(*ptr)) ptr++;
             temp = strndup(start, ptr - start);
-            *token_error_flag = 1;
+            token_creation_error = 1;
             printf("panic! at line %d: %s is an undefined word\n", line_number, temp);
             /* Add a way to signal there was an error in the tokenizetion stage while build the AST */
         }

@@ -48,7 +48,7 @@ ASTNode* create_AST_node(Token *tokens, ASTNodeList* node_list, DirectiveTable* 
     /*for (index = 0; tokens[index].type != TOKEN_EOF; index++) { */
         curr_token = tokens;
         if (curr_token->type == TOKEN_INSTRUCTION) {
-            ASTNode* instruction_node = malloc(sizeof(ASTNode));
+            ASTNode* instruction_node;
             /* Add testing to verify the alocation */
             instruction_node = create_instrucion_node(curr_token);
             insert_node(node_list, instruction_node);
@@ -258,10 +258,7 @@ ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_t
        After doing so, link the definition node to the symbol table. */
         /* Symbol* found; */
         /*Symbol* symbol;*/
-        ASTNode* definition_node = malloc(sizeof(ASTNode));
-        if (definition_node == NULL) {
-            memory_allocation_failure();
-        }
+        ASTNode* definition_node;
         /* Old implementation: 
         definition_node = create_instrucion_node(token, index);
         found = lookup_symbol(symbol_table, label->val);
@@ -286,7 +283,7 @@ ASTNode* create_label_node(Token* token, int* index, DirectiveTable* directive_t
         return node;
     }
     else if (token->type == TOKEN_DIRECTIVE) {
-        ASTNode* defenition_node = malloc(sizeof(ASTNode));
+        ASTNode* defenition_node;
         defenition_node = create_directive_node(token, index, directive_table);
         node->data.label.definition_node = defenition_node;
         return node;

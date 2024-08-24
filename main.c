@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
         MacroList* macro_list;
         int macro_error_detected;
         Shed* shed = malloc(sizeof(Shed));
-        int token_creation_error = 0, ast_creation_error = 0, translation_error = 0;
+        /*int token_creation_error = 0, ast_creation_error = 0, translation_error = 0;*/
         if (!input_file) {
             printf("panic! unable to open %s\n", file_name);
             free(file_name);
@@ -147,7 +147,7 @@ int main(int argc, char *argv[]) {
 
         while (fgets(line_content, sizeof(line_content), output_file)) {
             Token* tokens = malloc(sizeof(Token) * 256);
-            tokenize(line_content, line_number, macro_list, &token_creation_error, tokens);
+            tokenize(line_content, line_number, macro_list, tokens);
             create_AST_node(tokens, shed->node_list, shed->directive_table);
             line_number++;
             clear_token_arr(tokens);
