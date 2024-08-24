@@ -1,13 +1,31 @@
+/**
+ * @file preprocessor.c
+ * @author David Israel (you@domain.com)
+ * @brief This module's goal is to turn an "as" file into an "am" file.
+ * @version Final.
+ * @date 2024-08-24
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include "preprocessor.h"
 #include "lexer.h"
 #include "panic.h"
 #include <string.h>
 
-
+/**
+ * @brief This function takes a file and processes it to create an output file after all macros have been inserted into their positions.
+ * 
+ * @param input input file.
+ * @param output output file.
+ * @param macro_list macro_list to store all of the macros that were defibned in the file.
+ * @return int 1 if an error was found, 0 if all is well.
+ */
 int process_file(FILE* input, FILE* output, MacroList* macro_list) {
-    char line[256];
-    char macro_name[30];
-    char macro_defenition[512];
+    char line[MAX_LINE_LEN];
+    char macro_name[MAX_MACRO_NAME_LEN];
+    char macro_defenition[MAX_MACRO_DEFENITION_LEN];
     int state = NORMAL_LINE;
     int line_number = 1;
     int error_detected = 0;
@@ -51,6 +69,11 @@ int process_file(FILE* input, FILE* output, MacroList* macro_list) {
     return error_detected;
 }
 
+/**
+ * @brief This function creates a macro list.
+ * 
+ * @return MacroList* the macro list.
+ */
 MacroList* create_macro_list() {
     MacroList* list = malloc(sizeof(MacroList));
     list->head = NULL;
@@ -58,6 +81,13 @@ MacroList* create_macro_list() {
     return list;
 }
 
+/**
+ * @brief This functiob adds macros into the macro list.
+ * 
+ * @param list the macro list.
+ * @param macro_name new macro's name.
+ * @param macro_defenition new macro's defenition.
+ */
 void add_macro(MacroList* list, char* macro_name, char* macro_defenition) {
     Macro* new_macro = malloc(sizeof(Macro));
     if (new_macro == NULL) {
@@ -76,6 +106,11 @@ void add_macro(MacroList* list, char* macro_name, char* macro_defenition) {
     list->head = new_macro;
 }
 
+/**
+ * @brief This function clears the macro list.
+ * 
+ * @param list the list to be cleard 
+ */
 void clear_macro_list(MacroList* list) {
     Macro* curr = list->head;
     Macro* next;
@@ -91,6 +126,13 @@ void clear_macro_list(MacroList* list) {
     list = NULL;
 }
 
+/**
+ * @brief This function replaces a macro call with it's defenition.
+ * 
+ * @param macro_list the macro list.
+ * @param curr_line current line.
+ * @param output_file the output file.
+ */
 void replace_macro(MacroList* macro_list, char* curr_line, FILE* output_file) {
     Macro* curr_macro = macro_list->head;
     int found = 0;
@@ -107,6 +149,13 @@ void replace_macro(MacroList* macro_list, char* curr_line, FILE* output_file) {
     }
 }
 
+/**
+ * @brief This function is used in the tokenizetion process to detrmin if a label token has the same name as a pre-defined macro.
+ * 
+ * @param macro_list macro list.
+ * @param name label name.
+ * @return int return 1 if they share the same name, and 0 if they don't.
+ */
 int is_macro(MacroList* macro_list, char* name) {
     Macro* curr = macro_list->head;
     while (curr != NULL) {
@@ -118,6 +167,14 @@ int is_macro(MacroList* macro_list, char* name) {
     return 0;
 }
 
+/**
+ * @brief This function takes a file's name and adds/changes its suffix.
+ * 
+ * @param curr_file_name 
+ * @param new_suffix 
+ * @param use_case to signal if dealing with the original input file or using the function to create output files.
+ * @return char* the new file name.
+ */
 char* add_suffix_to_file_name(char* curr_file_name, char* new_suffix, useCase use_case) {
     char* suffix_start;
     char* new_file_name;
@@ -151,35 +208,3 @@ char* add_suffix_to_file_name(char* curr_file_name, char* new_suffix, useCase us
 
     return new_file_name;
 }
-
-/*
-int main(int argc, char* argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Usage: %s <input file> <output file>\n", argv[0]);
-        return 1;
-    }
-
-    FILE* input_file = fopen(argv[1], "r");
-    FILE* output_file = fopen(argv[2], "w");
-
-    if (!input_file) {
-        fprintf(stderr, "Error: Could not open input file %s\n", argv[1]);
-        return 1;
-    }
-
-    if (!output_file) {
-        fprintf(stderr, "Error: Could not open output file %s\n", argv[2]);
-        fclose(input_file);
-        return 1;
-    }
-
-    process_macros(input_file, output_file);
-
-    fclose(input_file);
-    fclose(output_file);
-
-    printf("Pre-processing complete. Output written to %s\n", argv[2]);
-
-    return 0;
-}
-*/

@@ -8,6 +8,10 @@
 #include "symbol_table.h"
 #include <stdio.h>
 
+#define MAX_LINE_LEN 256
+#define MAX_MACRO_NAME_LEN 30
+#define MAX_MACRO_DEFENITION_LEN 512
+
 typedef enum {
     NORMAL_LINE, DEFINING_MACRO 
 } defenition_state;
