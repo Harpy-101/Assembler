@@ -10,6 +10,8 @@
 #include "error_flags.h"
 
 #define MAX_LINE_LENGTH 256
+#define MAX_INT 32767
+#define MIN_INT -32768
 
 typedef enum {
     TOKEN_LABEL, TOKEN_LABEL_DEFENITION, TOKEN_INSTRUCTION, TOKEN_REGISTER,
@@ -33,13 +35,7 @@ typedef struct Token {
     int line;
     int collumn;
     addressing_mode mode;
-    char* origin;
-    struct Token* next;
 } Token;
-
-typedef struct {
-    Token* head;
-} TokenList;
 
 
 int is_special_char(int c);
@@ -56,8 +52,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
 void print_token_list(Token* tokens);
 void remove_collon(char* str);
 void clear_token_arr(Token* tokens); 
-void clear_token_list(TokenList* token_list); 
-void add_token(TokenList* token_list, Token* token);
-TokenList* create_token_list(); 
+
 
 #endif

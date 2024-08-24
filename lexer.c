@@ -4,10 +4,9 @@
 #include <ctype.h>
 #include "lexer.h"
 #include "error_flags.h"
-#include "panic.h"
 #include "preprocessor.h"
 
-
+/* a list of opcodes, register names and directives to be used throughout the program */
 char* opcode[] ={
     "mov", "cmp", "add", "sub",
     "lea", "clr", "not", "inc", 
@@ -23,61 +22,54 @@ char* directive_list[] = {
     ".data", ".string", ".entry", ".extern"
 };
 
-/* Remove this after testing */
-char* labels[] = {
-    "MAIN:", "LOOP:", "END:"
-};
+int collumn;
 
-int line = 0, collumn;
-
-int panic = 0;
-
-char* strndup(const char* src, size_t n) {
-    size_t len = strlen(src);
+/**
+ * @brief This function duplicates part of a string and returns a dynamically allocated version of it.
+ *        This function is my interpretation of the original "strndup" 
+ * @param str thestring. 
+ * @param n limiter.
+ * @return char* a pointer to the duplicated string. 
+ */
+char* strndup(const char* str, size_t n) {
+    size_t len = strlen(str);
     size_t i;
     char* dup;
     if (n < len) {
         len = n;
     }
 
-    dup = (char*)malloc(len + 1); /* Allocate memory for the new string (+1 for the null terminator) */
+    dup = (char*)malloc(len + 1); 
     if (dup == NULL) {
-        return NULL; /* Allocation failed */
+        return NULL; 
     }
 
     for (i = 0; i < len; ++i) {
-        dup[i] = src[i];
+        dup[i] = str[i];
     }
-    dup[len] = '\0'; /* Null-terminate the duplicated string */
+    dup[len] = '\0'; 
 
     return dup;
 }
 /**
- * @brief 
+ * @brief This function takes a code line and divides it into identifiable tokens.
  * 
- * @param input 
- * @param line_number 
- * @param symbol_table 
- * @param unresolved_list 
- * @param file_name 
- * @return Token*
+ * @param input the code line.
+ * @param line_number for error handling.
+ * @param macro_list for testing if a label shares the same name as a pre-defined macro.
+ * @param tokens an array of tokens for storage 
  * 
- * TODO: Add a case for handling comments at the start of the line (valid)
- * TODO: Add a case for handling comments in the middle of a line (not-valid) */
+ */
 void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens) {
     int i = 0;
     char* ptr = input;
-    /*Token* tokens = malloc(sizeof(Token) * 256); Chnage this into a dynamic structure after tezsting 
-    */
+  
     addressing_mode mode = TBD;
-    /*if (!tokens) {
-        memory_allocation_failure();
-    }*/
+
     collumn = 0;
     while(*ptr) {
         collumn++;
         mode = TBD; 
-        if (*ptr == '\n') line++;
         
         if (isspace(*ptr)) {
             ptr++;
@@ -104,7 +96,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
                 Token token;
                 (mode == TBD) ? (mode = TBD) : (mode = mode);
                 token = create_token(TOKEN_INSTRUCTION, temp, line_number, collumn, mode);
-                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
@@ -121,7 +112,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
                 Token token;
                 (mode == TBD) ? (mode = DIRECT_REGISTER) : (mode = INDIRECT_REGISTER);
                 token = create_token(TOKEN_REGISTER, temp, line_number, collumn, mode);
-                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
@@ -140,10 +130,8 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
                     Token token;
                     (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                     token = create_token(TOKEN_LABEL_DEFENITION, temp, line_number, collumn, mode);
-                    /*add_token(token_list, token);*/
                     tokens[i++] = token;
                     ptr++;
-                    /*insert_symbol(symbol_table, token.val, line_number); */
                     continue; 
                 }
                 printf("\033[31mpanic!\033[0m at line %d: a label can't be the same name as an opcode, register or a macro\n", line_number);
@@ -160,7 +148,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
             temp = strndup(start, ptr - start);
             if (is_directive(temp)) {
                 Token token = create_token(TOKEN_DIRECTIVE, temp, line_number, collumn, mode);
-                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
@@ -175,7 +162,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
             if (is_valid_int(temp)) {
                Token token;
                 token = create_token(TOKEN_NUMBER, temp, line_number, collumn, mode);
-                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
@@ -192,7 +178,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
                 temp = strndup(start, ptr - start);
                 if (is_valid_string(temp)) {
                     Token token = create_token(TOKEN_STRING, temp, line_number, collumn, mode);
-                    /*add_token(token_list, token);*/
                     tokens[i++] = token;
                     ptr++;
                     continue;
@@ -203,8 +188,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
         }
         /* Id comma */
         if (*ptr == ',') {
-            /*Token token = create_token(TOKEN_COMMA, ",", line_number, collumn, mode);*/
-            /*add_token(token_list, token);*/
             tokens[i++] = create_token(TOKEN_COMMA, ",", line_number, collumn, mode);
             ptr++;
             continue;
@@ -217,7 +200,6 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
             temp = strndup(start, ptr - start);
             if (is_directive(temp)) {
                 Token token = create_token(TOKEN_DIRECTIVE, temp, line_number, collumn, mode);
-                /*add_token(token_list, token);*/
                 tokens[i++] = token;
                 continue;
             }
@@ -225,25 +207,23 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
             ptr = start;
 
         }
-        /* This is a temporery function for identification of unknowen labels
-           this needs to be changed  */
+        /* id a potential label call */
         if (isalnum(*ptr)) {
             char* start = ptr;
             char* temp;
             while (!isspace(*ptr) && (*ptr) != ',') ptr++;
             temp = strndup(start, ptr - start);
-            if (1 && !is_macro(macro_list, temp) && mode == TBD) {
+            if (1 && is_label(macro_list, temp) && mode == TBD) {
                 Token token;
                 (mode == TBD) ? (mode = DIRECT) : (mode = mode);
                 token = create_token(TOKEN_LABEL, temp, line_number, collumn, mode);
-                /*add_token(token_list, token);*/
                 tokens[i++] = token;
-                /*add_unresolved_label(token.val, line_number, unresolved_list, file_name);*/
                 continue;
             }
             free(temp);
             ptr = start;
         }
+        /* undefined word */
         if (1) {
            char* start = ptr;
             char* temp;
@@ -252,16 +232,19 @@ void tokenize(char* input, int line_number, MacroList* macro_list, Token* tokens
             token_creation_error = 1;
             printf("\033[31mpanic!\033[0m at line %d: %s is an undefined word and/or uses the wrong addressing mode \n", line_number, temp);
             token_creation_error = 1;
-            /* Add a way to signal there was an error in the tokenizetion stage while build the AST */
         }
 
     }
-    /*token = create_token(TOKEN_EOF, NULL, line, collumn, DIRECT);*/
-    /*add_token(token_list, token);*/
-    tokens[i] =create_token(TOKEN_EOF, NULL, line, collumn, DIRECT);
+    tokens[i] =create_token(TOKEN_EOF, NULL, line_number, collumn, DIRECT);
     return;
 }
 
+/**
+ * @brief This function compares a potential opcode to all known opcodes in order to find a match.
+ * 
+ * @param temp the potential opcode.
+ * @return int 1 if a match was found, 0 if it waasn't.
+ */
 int is_opcocde(char* temp) {
     int i, len = sizeof(opcode) / sizeof(opcode[0]);
     for (i = 0; i < len; i++) { 
@@ -272,6 +255,12 @@ int is_opcocde(char* temp) {
     return 0;
 }
 
+/**
+ * @brief This function compares a potential register to all known registers in order to find a match.
+ * 
+ * @param temp the potential register. 
+ * @return int 1 if a match was found, 0 if it waasn't.
+ */
 int is_register(char* temp) {
     int i, len = sizeof(register_names) / sizeof(register_names[0]);
     for (i = 0; i < len; i++) {
@@ -282,15 +271,16 @@ int is_register(char* temp) {
     return 0;
 }
 
-/* Need to add mnoore testing for labels and other reserved words */
+/**
+ * @brief This function compares a potential label to all known registers, opcodes and macros in order to find a match.
+ * 
+ * @param macro_list 
+ * @param temp the potential label.
+ * @return int 0 if a match was found, rendering the label unusable, 1 if its use is possible. 
+ */
 int is_label(MacroList* macro_list, char* temp) {
-    int i, len = sizeof(labels) / sizeof(labels[0]);
-    if (!is_register(temp)) {
-        for (i = 0; i < len; i++) {
-            if (strcmp(temp, labels[i]) == 0) {
-                return 0;
-            }
-        }
+    if (is_register(temp) == 1) {
+        return 0;
     }
     if (is_opcocde(temp) == 1) {
         return 0;
@@ -301,6 +291,12 @@ int is_label(MacroList* macro_list, char* temp) {
     return 1;
 }
 
+/**
+ * @brief  This function compares a potential directive to all known directives in order to find a match.
+ * 
+ * @param temp the potential directive.
+ * @return int 1 if a match was found, 0 if it wasn't.
+ */
 int is_directive(char* temp) {
     int i, len = sizeof(directive_list) / sizeof(directive_list[0]);
     for (i = 0; i < len; i++) {
@@ -311,13 +307,30 @@ int is_directive(char* temp) {
     return 0;
 }
 
+/**
+ * @brief This function checks if the number entred is valid
+ * 
+ * @param temp the number
+ * @return int 1 if the number is valid, 0 if not.
+ */
 int is_valid_int(char* temp) {
+    int val = atoi(temp);
+    if (val > MAX_INT || val < MIN_INT) {
+        return 0;
+    }
     if (strstr(temp, ".") == NULL) {
         return 1;
     }
+    
     return 0;
 }
 
+/**
+ * @brief This function checks if a given string is valid.
+ * 
+ * @param temp the string
+ * @return int 
+ */
 int is_valid_string(char* temp) {
     if (strchr(temp, '"') == NULL) {
         return  1;
@@ -325,6 +338,16 @@ int is_valid_string(char* temp) {
     return 0;
 }
 
+/**
+ * @brief Create a token objectThis function creates a token 
+ * 
+ * @param type token type
+ * @param val token value
+ * @param line 
+ * @param collumn 
+ * @param mode addresing mode
+ * @return Token 
+ */
 Token create_token(TokenType type, char* val, int line, int collumn, addressing_mode mode) {
     Token token;
     
@@ -337,6 +360,11 @@ Token create_token(TokenType type, char* val, int line, int collumn, addressing_
     return token;
 }
 
+/**
+ * @brief This was an old function for testing 
+ * 
+ * @param tokens 
+ */
 void print_token_list(Token* tokens) {
     int curr_line = 0, i;
     for (i = 0; tokens[i].type != TOKEN_EOF ; i++) {
@@ -348,6 +376,11 @@ void print_token_list(Token* tokens) {
     }
 }
 
+/**
+ * @brief This function clears the tokens array
+ * 
+ * @param tokens 
+ */
 void clear_token_arr(Token *tokens) {
     int i;
     for (i = 0; tokens[i].type != TOKEN_EOF; i++) {
@@ -357,130 +390,14 @@ void clear_token_arr(Token *tokens) {
     }
     free(tokens);  
 }
-    
-   /* Token* curr = tokens;
-    while (curr->type != TOKEN_EOF) {
-        if (curr->type == TOKEN_COMMA) {
-            curr++;
-            continue;
-        }
-        free(curr->val);
-        curr++;
-    }
-    free(tokens);*/
 
-TokenList* create_token_list() {
-    TokenList* list = malloc(sizeof(TokenList));
-    if (list == NULL) {
-        memory_allocation_failure();
-    }
-    list->head = NULL;
-    return list;
-}
-
-void add_token(TokenList* token_list, Token* token) {
-    if (token_list->head == NULL) {
-        token_list->head = token;
-    } else {
-        Token* current = token_list->head;
-        while (current->next != NULL) {
-            current = current->next;
-        }
-        current->next = token;
-    }
-    token->next = NULL;  
-}
-    
-void clear_token_list(TokenList* token_list) {
-    Token* curr = token_list->head;
-    Token* next;
-    while (curr != NULL) {
-        next = curr->next;
-        if (curr->type == TOKEN_COMMA) {
-            free(curr);
-            curr = next;
-            continue;
-        }
-        else {
-            free(curr->val);
-            free(curr);
-            curr = next;
-        }
-    }
-    free(token_list);
-}
-
-char* read_file(const char* filename) {
-    FILE *file = fopen(filename, "r");
-    long file_size;
-    char *buffer; 
-    if (file == NULL) {
-        perror("Failed to open file");
-        exit(EXIT_FAILURE);
-    }
-
-    fseek(file, 0, SEEK_END);
-    file_size = ftell(file);
-    rewind(file);
-
-    buffer = (char*)malloc((file_size + 1) * sizeof(char));
-    if (buffer == NULL) {
-        perror("Failed to allocate memory");
-        exit(EXIT_FAILURE);
-    }
-
-    fread(buffer, sizeof(char), file_size, file);
-    buffer[file_size] = '\0';
-
-    fclose(file);
-    return buffer;
-}
-
+/**
+ * @brief This function is used to remove the collon for label testing
+ * 
+ * @param str 
+ */
 void remove_collon(char* str) {
     int len = strlen(str);
     str[len-1] = '\0';
 }
 
-/*
-int main(int argc, char *argv[]) {
-    const char* filename;
-    char line_content[MAX_LINE_LENGTH];
-    Token* tokens;
-    Token* current;
-    FILE *file;
-    int line_number = 0;
-    HashTable* symbol_table = create_hash_table(INITIAL_HASH_TABLE_SIZE);
-    unresolvedLabelRefList* unresolved_list = create_unresolved_label_list();
-
-    if (argc != 2) {
-        fprintf(stderr, "Usage: %s <filename>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    filename = argv[1];
-    file = fopen(filename, "r");
-    if (!file) {
-        perror("Failed to open file");
-        return EXIT_FAILURE;
-    }
-
-    while (fgets(line_content, sizeof(line_content), file)) {
-        line_number++;
-        tokens = tokenize(line_content, line_number, symbol_table, unresolved_list);
-        
-        create_instrucion_node(tokens);
-
-        current = tokens;
-        while (current && current->type != TOKEN_EOF) {
-            printf("Token Type: %d, Value: \"%s\", Line: %d, Column: %d\n",
-                   current->type, current->val, current->line, current->collumn);
-            current++;
-        }
-
-        free(tokens);
-    }
-
-    fclose(file);
-    return EXIT_SUCCESS;
-}
-*/
