@@ -1,10 +1,26 @@
+/**
+ * @file file_generator.c
+ * @author David Israel
+ * @brief 
+ * @version Final
+ * @date 2024-08-25
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include "file_generator.h"
+#include "error_flags.h"
 #include "preprocessor.h"
 #include "symbol_table.h"
 #include "transletor.h"
 #include "word_types.h"
 #include <stdio.h>
 
+/**
+ * @brief This fuction calls the file creatoion functions.
+ * 
+ * @param shed 
+ */
 void create_output_files(Shed* shed) {
     create_object_file(shed, shed->code_list, shed->data_list);
     
@@ -12,10 +28,20 @@ void create_output_files(Shed* shed) {
         printf("\033[31mpanic!\033[0m) Source file requires more memory to run than the host system has to offer. Aborting compilatio\n");
         return;
     }
+    if (label_resolution_error == 1) {
+        return;
+    }
     
     create_extern_and_entry_files(shed);
 }
 
+/**
+ * @brief Create a object file objectThis function crerates the ".ob" file.
+ * 
+ * @param shed 
+ * @param code_list 
+ * @param data_list 
+ */
 void create_object_file(Shed* shed, WordList* code_list, WordList* data_list) {
     WordNode* curr = code_list->head;
     char output_text[50];
@@ -32,6 +58,10 @@ void create_object_file(Shed* shed, WordList* code_list, WordList* data_list) {
 
     stich_both_lists(code_list, data_list);
     resolve_unresolved_list(shed);
+
+    if (label_resolution_error == 1) {
+        return;
+    }
 
     if (data_list->tail->address > 4096) {
         printf("\033[31mpanic!\033[0m) Source file requires more memory to run than the host system has to offer. Aborting compilatio\n");
@@ -114,6 +144,11 @@ void create_object_file(Shed* shed, WordList* code_list, WordList* data_list) {
     fclose(ob_file);
 }
 
+/**
+ * @brief This function creates the .ent/ext files.
+ * 
+ * @param shed 
+ */
 void create_extern_and_entry_files(Shed* shed) {
     DirectiveNode* curr = shed->directive_list->head;
     char output_text[50];

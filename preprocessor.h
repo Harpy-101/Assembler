@@ -11,6 +11,8 @@
 #define MAX_LINE_LEN 256
 #define MAX_MACRO_NAME_LEN 30
 #define MAX_MACRO_DEFENITION_LEN 512
+#define MACR "macr"
+#define ENDMACR "endmacr"
 
 typedef enum {
     NORMAL_LINE, DEFINING_MACRO 

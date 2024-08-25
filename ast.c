@@ -1,3 +1,13 @@
+/**
+ * @file ast.c
+ * @author David Israel
+ * @brief 
+ * @version Final
+ * @date 2024-08-24
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include "ast.h"
 #include "error_flags.h"
 #include "lexer.h"

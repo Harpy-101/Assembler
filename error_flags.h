@@ -4,5 +4,6 @@
 extern int token_creation_error;
 extern int ast_creation_error;
 extern int translation_error;
+extern int label_resolution_error;
 
 #endif 

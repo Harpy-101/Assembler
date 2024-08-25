@@ -27,22 +27,11 @@ typedef enum {
 
 typedef struct Symbol {
     char* name;
-    address_type address_type;
     int* address;
     char* definition_origin;    
     struct Symbol* next;
-    struct ASTNode* dfinition_node;
+    struct ASTNode* dfinition_node; /* This was originally supposed to be used for the linker*/
 } Symbol;
-/*
-typedef struct HashTable{
-    void** map;
-    int size;
-    int count;
-    int (*add_function)(struct HashTable* table, char* value, int address);
-    void* (*lookup_function)(struct HashTable* table, char* value);
-    void (*clear_function)(void* data);
-} HashTable;
-*/
 
 typedef struct {
     Symbol **map;

@@ -1,9 +1,27 @@
+/**
+ * @file symbol_table.c
+ * @author David Israel
+ * @brief This module contains all the hash table implementations in this program. 
+ *        The main idea was to create a generic hash table implementation to be used more extensively,
+ *        however due to time constraints and complexity I ended up scrapping the idea completely, which resulted in repetitive code. 
+ * @version Final
+ * @date 2024-08-24
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include "symbol_table.h"
 #include "panic.h"
-/*#include "transletor.h"*/
 #include <stdio.h>
 #include <string.h>
 
+/**
+ * @brief This is the hashing function for all the hash tables in this program (taken from the: "Learning the C programming language" (p.144 in the second edition).
+ * 
+ * @param s the string to be hashed.
+ * @param hashsize the table size.
+ * @return unsigned int 
+ */
 unsigned int hash(char *s, int hashsize) {
     unsigned hashval;
     for (hashval = 0; *s != '\0'; s++)
@@ -11,6 +29,12 @@ unsigned int hash(char *s, int hashsize) {
     return hashval % hashsize;
 }
 
+/**
+ * @brief This function creats a symbol hash-table.
+ * 
+ * @param size original table size.
+ * @return SymbolTable* a pointer to the newly created hash table 
+ */
 SymbolTable* create_hash_table(int size) {
     SymbolTable* hash_table = (SymbolTable*)malloc(sizeof(SymbolTable));
     if (hash_table == NULL) {
@@ -27,6 +51,12 @@ SymbolTable* create_hash_table(int size) {
     return hash_table;
 }
 
+/**
+ * @brief This function creats a directive hash table for the extern/entry calls.
+ * 
+ * @param size table size.
+ * @return DirectiveTable* a pointer to the newly crated directives table. 
+ */
 DirectiveTable* create_directive_table(int size) {
     DirectiveTable* directive_table = (DirectiveTable*)malloc(sizeof(DirectiveTable));
     if (directive_table == NULL) {
@@ -42,6 +72,13 @@ DirectiveTable* create_directive_table(int size) {
     return directive_table;
 }
 
+/**
+ * @brief This function iserts a symbol into the symbol table.
+ * 
+ * @param hash_table the symbol table.
+ * @param name the symbols name.
+ * @param line_address the stmbols address.
+ */
 void insert_symbol(SymbolTable* hash_table, char* name, int* line_address) {
     int hash_index;
     Symbol* symbol;
@@ -61,14 +98,19 @@ void insert_symbol(SymbolTable* hash_table, char* name, int* line_address) {
     }
 
     symbol->address = line_address;
-    /*symbol->name = name;*/
     hash_index = hash(name, hash_table->size);
     symbol->next = hash_table->map[hash_index];
     hash_table->map[hash_index] = symbol;
     hash_table->count++;
-    /*printf("Inserted symbol: %s at address: 0x%x in hash index: %d\n", symbol->name, *symbol->address, hash_index);*/
 }
 
+/**
+ * @brief This function iserts a directive call into the directivs table.
+ * 
+ * @param directive_table the directive hash table.
+ * @param name the label name 
+ * @param directive_type extern/entry
+ */
 void insert_directive(DirectiveTable* directive_table, char* name, int directive_type) {
     int hash_index;
     directiveRef* directive;
@@ -92,15 +134,20 @@ void insert_directive(DirectiveTable* directive_table, char* name, int directive
     directive->next = directive_table->map[hash_index];
     directive_table->map[hash_index] = directive;
     directive_table->count++;
-    /*printf("Inserted directive: %s in hash index: %d\n", directive->name, hash_index);*/
 }
 
+/**
+ * @brief This function looks for the symbol's name in the symbol table. If one is indeed found it  will be returned, if nothing is found the function returns NULL.
+ * 
+ * @param hash_table the symbol table.
+ * @param name the symbol the function looks for.
+ * @return Symbol* a pointer to the found symbol (if found) or NULL if the symbol wasn't found.
+ */
 Symbol* lookup_symbol(SymbolTable* hash_table, char* name) {
     int hash_index = hash(name, hash_table->size);
     Symbol* symbol = hash_table->map[hash_index];
     
     while (symbol != NULL) {
-        /*printf("Comparing '%s' with '%s'\n", symbol->name, name);*/
         if (strcmp(symbol->name, name) == 0) {
             return symbol;
         }
@@ -109,6 +156,13 @@ Symbol* lookup_symbol(SymbolTable* hash_table, char* name) {
     return NULL;
 }
 
+/**
+ * @brief This function looks for the directive label name in the directivs table. If one is indeed found it will be returned, if nothing was found the function returns NULL.
+ * 
+ * @param directive_table the directiv's table.
+ * @param name label name.
+ * @return directiveRef* a pointer to the found symbol (if found) or NULL if the symbol wasn't found. 
+ */
 directiveRef* lookup_directive(DirectiveTable* directive_table, char* name) {
     int hash_index = hash(name, directive_table->size);
     directiveRef* directive = directive_table->map[hash_index];
@@ -122,6 +176,11 @@ directiveRef* lookup_directive(DirectiveTable* directive_table, char* name) {
     return NULL;
 }
 
+/**
+ * @brief A clear table function fot the symbol table.
+ * 
+ * @param hash_table the symbol table.
+ */
 void clean_symbol_table(SymbolTable* hash_table) {
     int i;
     for (i = 0; i < hash_table->size; i++) {
@@ -138,6 +197,11 @@ void clean_symbol_table(SymbolTable* hash_table) {
     free(hash_table);
 }
 
+/**
+ * @brief This function returns the memory alocated for the direcrivs table.
+ * 
+ * @param directive_table the firective table.
+ */
 void clean_directive_table(DirectiveTable* directive_table) {
     int i;
     for (i = 0; i < directive_table->size; i++) {
@@ -153,9 +217,11 @@ void clean_directive_table(DirectiveTable* directive_table) {
     free(directive_table);
 }
 
-/* Still need to check this function. 
-   It's possible that something in the whiile loop is wrong, but I'm not sure
-*/
+/**
+ * @brief This function takes the original hash table and expands it if a predefined load factor was reached. 
+ * 
+ * @param hash_table the original symbol table.
+ */
 void resize_hash_table(SymbolTable* hash_table) {
     int i;
     int new_size = hash_table->size * 2;
@@ -182,6 +248,11 @@ void resize_hash_table(SymbolTable* hash_table) {
     hash_table->size = new_size;
 }
 
+/**
+ * @brief This function takes the original hash table and expands it if a predefined load factor was reached. 
+ * 
+ * @param hash_table the directive table. 
+ */
 void resize_directive_table(DirectiveTable* hash_table) {
     int i;
     int new_size = hash_table->size * 2;
@@ -208,6 +279,11 @@ void resize_directive_table(DirectiveTable* hash_table) {
     hash_table->size = new_size;
 }
 
+/**
+ * @brief This function creates the unresolved list.
+ * 
+ * @return unresolvedLabelRefList* a pointer to the list.
+ */
 unresolvedLabelRefList* create_unresolved_label_list() {
     unresolvedLabelRefList* unresolved_list = malloc(sizeof(unresolvedLabelRefList));
     if (unresolved_list == NULL) {
@@ -217,6 +293,14 @@ unresolvedLabelRefList* create_unresolved_label_list() {
     return unresolved_list;
 }
 
+/**
+ * @brief This function adds an unresolved label into the list.
+ * 
+ * @param name label name.
+ * @param address label address.
+ * @param word the "Word" structure of this word.
+ * @param unresolved_list the list.
+ */
 void add_unresolved_label(char* name, int* address, Word* word, unresolvedLabelRefList* unresolved_list) {
     unresolvedLabelRef* label = malloc(sizeof(unresolvedLabelRef));
    if (label == NULL) {
@@ -232,6 +316,11 @@ void add_unresolved_label(char* name, int* address, Word* word, unresolvedLabelR
     unresolved_list->head = label;
 }
 
+/**
+ * @brief This function clears the unresolved list.
+ * 
+ * @param list the list.
+ */
 void clear_unresolved_list(unresolvedLabelRefList* list) {
     unresolvedLabelRef* node = list->head;
     unresolvedLabelRef* temp;
@@ -244,24 +333,34 @@ void clear_unresolved_list(unresolvedLabelRefList* list) {
     list->head = NULL;
 }
 
-char* strdup(const char* src) {
-   /*Allocate memory for the duplicate string*/
-    char* dup = (char*)malloc(strlen(src) + 1); /*. +1 for the null terminator*/
+/**
+ * @brief This function duplicates a string and returns a dynamically allocated version of it.
+ *        This function is my interpretation of the original "strdup" 
+ * 
+ * @param str the source string 
+ * @return char* a pointer to the newly allocated sstring.
+ */
+char* strdup(const char* str) {
+    char* dup = (char*)malloc(strlen(str) + 1); 
     char* ptr;
     if (dup == NULL) {
-        return NULL; /*Allocation failed*/
+        return NULL; 
     }
 
-    /*Copy the string */
     ptr = dup;
-    while (*src) {
-        *ptr++ = *src++;
+    while (*str) {
+        *ptr++ = *str++;
     }
-    *ptr = '\0'; /* Null-terminate the duplicated string*/
+    *ptr = '\0'; 
 
     return dup;
 }
 
+/**
+ * @brief A printing function for testing purposes. 
+ * 
+ * @param symbol_table the symbol table.
+ */
 void print_symbol_table(SymbolTable* symbol_table) {
     int i;
     for (i = 0; i < symbol_table->size; i++) {
@@ -276,6 +375,11 @@ void print_symbol_table(SymbolTable* symbol_table) {
     }
 }
 
+/**
+ * @brief A printing function for testing purposes. 
+ * 
+ * @param list 
+ */
 void print_unresolved_list(unresolvedLabelRefList* list) {
     unresolvedLabelRef* node = list->head;
     while (node != NULL) {
@@ -284,63 +388,3 @@ void print_unresolved_list(unresolvedLabelRefList* list) {
     }
 }
 
-/**
- * @brief 
- *
- * @param symbol_table 
- * @param list 
- * @return :
- * todo: Add a proper resolution algorithem for both directives and labels. 
- */
-/*void resolve_unresolved_list(SymbolTable* symbol_table, unresolvedLabelRefList* list) {
-    unresolvedLabelRef* prev = NULL;
-    unresolvedLabelRef* node = list->head;
-    Symbol* found;
-
-    if (node == NULL) {
-        printf("Symbol table is empty\n");
-        return;
-    }
-
-    if (lookup_symbol(symbol_table, node->name) != NULL) {
-        node= node->next;
-    }
-
-    while(node != NULL) {
-        found = lookup_symbol(symbol_table, node->name);
-        if (found == NULL) {
-            prev = node;
-            node = node->next;
-        }
-        else {
-            prev->next = node->next;
-            free(node);
-        }
-    }
-}*/
-/*
-HashTable* create_hash_table(
-                            int size,
-                            void* (lookup_function)(HashTable* table, char* value),
-                            int (*add_function)(HashTable* table, char* value, int address),
-                            void (*clear_function)(void* data)) {
-    HashTable* hash_table = (HashTable*)malloc(sizeof(HashTable));
-    if (hash_table == NULL) {
-        memory_allocation_failure();
-    }
-
-    hash_table->size = size;
-    hash_table->count = 0;
-    hash_table->map = (void**)calloc(size, sizeof(void*));
-    if (hash_table->map == NULL) {
-        free(hash_table);
-        memory_allocation_failure();
-    }
-
-    hash_table->lookup_function = lookup_function;
-    hash_table->add_function = add_function;
-    hash_table->clear_function = clear_function;
-    
-    return hash_table;
-}
-*/

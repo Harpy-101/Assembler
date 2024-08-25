@@ -7,50 +7,9 @@
 #include <string.h>
 #include "panic.h"
 
-/*typedef enum {
-    FIRST_WORD, DIRECT_WORD, IMIDIATE_WORD, REGISTER_WORD, DIRECTIVE_WORD
-} wordType;
-
-
-typedef struct {
-    unsigned int are : 3;
-    unsigned int destenation_address : 4;
-    unsigned int source_address : 4;
-    unsigned int opcode : 4;
-} firstWord;
-
-typedef struct directWord{
-    unsigned int are : 3;
-    unsigned int address : 12;
-} directWord;
-
-typedef struct {
-    unsigned int are : 3;
-    unsigned int value : 12;
-} imidiateWord;
-
-typedef struct {
-    unsigned int are : 3;
-    unsigned int source_regiester_name : 3;
-    unsigned int destination_register_name : 3;
-    unsigned int padding : 6; 
-} registerWord;
-
-typedef struct  {
-    unsigned int value : 15;
-} directiveWord;
-
-typedef struct {
-    union{
-        firstWord first_word;
-        directWord direct_word;
-        imidiateWord imidiate_word;
-        registerWord register_word;
-        directiveWord directive_word;
-    } type;
-    wordType word_type;
-} Word;
-*/
+#define A 4
+#define R 1
+#define E 0
 
 typedef struct WordNode {
     Word* word;
@@ -83,7 +42,6 @@ typedef struct {
     directWord* direct_word;
     WordList* code_list;
     WordList* data_list;
-    TokenList* token_list;
     imidiateWord* imidiate_word;
     registerWord* register_word;
     ASTNodeList* node_list;

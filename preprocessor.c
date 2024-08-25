@@ -50,15 +50,27 @@ int process_file(FILE* input, FILE* output, MacroList* macro_list) {
             line_number++;
         }
 
-        else if (state == DEFINING_MACRO && strstr(curr_line, "endmacr")) {
+        else if (state == DEFINING_MACRO && strstr(curr_line, ENDMACR)) {
+            char* post_endmacr = strstr(curr_line, "endmacr") + strlen(ENDMACR);
+            while (isspace(*post_endmacr)) post_endmacr++;
+            if (*post_endmacr != '\0' && *post_endmacr != '\n') {
+                 printf("\033[31mpanic!\033[0m at line %d: exces code after \"endmacr\"\n", line_number); 
+                 error_detected = 1;
+            }
             if (is_opcocde(macro_name) || is_register(macro_name)) {
                 printf("\033[31mpanic!\033[0m at line %d: \"%s\" is a reserved word, and so cannot be used as a macro name\n", line_number, macro_name);
                 line_number++;
                 error_detected = 1;
                 continue;
             }
-            add_macro(macro_list, macro_name, macro_defenition);
+            else {
+                add_macro(macro_list, macro_name, macro_defenition);
+            }
             state = NORMAL_LINE;
+            line_number++;
+        }
+        else if (state == DEFINING_MACRO) {
+            strcat(macro_defenition, curr_line);
             line_number++;
         }
         else {
